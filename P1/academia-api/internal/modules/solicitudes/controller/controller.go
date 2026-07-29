@@ -5,10 +5,10 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/dto"
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/service"
-	errorsapp "github.com/tu-usuario/academia-api/internal/shared/errors"
-	"github.com/tu-usuario/academia-api/internal/shared/response"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/dto"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/service"
+	errorsapp "github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/shared/errors"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/shared/response"
 )
 
 type Controller struct {

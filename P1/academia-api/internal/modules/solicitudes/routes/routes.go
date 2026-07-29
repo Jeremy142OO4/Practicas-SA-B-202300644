@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/controller"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/controller"
 )
 
 func Registrar(

@@ -9,8 +9,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/model"
-	errorsapp "github.com/tu-usuario/academia-api/internal/shared/errors"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/model"
+	errorsapp "github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/shared/errors"
 )
 
 type postgresRepository struct {

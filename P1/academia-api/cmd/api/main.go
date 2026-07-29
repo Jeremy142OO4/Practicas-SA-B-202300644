@@ -10,13 +10,13 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/tu-usuario/academia-api/internal/config"
-	"github.com/tu-usuario/academia-api/internal/infrastructure/database"
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/controller"
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/repository"
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/routes"
-	"github.com/tu-usuario/academia-api/internal/modules/solicitudes/service"
-	"github.com/tu-usuario/academia-api/internal/shared/response"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/config"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/infrastructure/database"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/controller"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/repository"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/routes"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/service"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/shared/response"
 )
 
 func main() {

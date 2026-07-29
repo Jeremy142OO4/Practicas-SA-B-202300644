@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/tu-usuario/academia-api/internal/config"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/config"
 )
 
 func NewPostgresPool(
