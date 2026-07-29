@@ -1,0 +1,223 @@
+{
+  "info": {
+    "_postman_id": "f677799e-a0c2-4a28-b018-d4901ae84dc8",
+    "name": "Academia API",
+    "description": "Colección para probar los cinco endpoints de solicitudes operativas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "solicitudId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Crear solicitud",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Estado 201\", function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const response = pm.response.json();",
+              "if (response.success && response.data && response.data.id) {",
+              "  pm.collectionVariables.set(\"solicitudId\", response.data.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"titulo\": \"Compra de equipo\",\n  \"area_solicitante\": \"Tecnología\",\n  \"prioridad\": 3,\n  \"costo_estimado\": 1250.50\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/solicitudes/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "solicitudes",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Listar solicitudes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Estado 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/solicitudes/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "solicitudes",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Actualizar solicitud",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Estado 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"titulo\": \"Compra de equipo actualizada\",\n  \"area_solicitante\": \"Tecnología\",\n  \"prioridad\": 4,\n  \"costo_estimado\": 1500.75,\n  \"estado\": \"en_proceso\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/solicitudes/{{solicitudId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "solicitudes",
+            "{{solicitudId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Actualizar estado",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Estado 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"finalizada\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/solicitudes/{{solicitudId}}/estado",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "solicitudes",
+            "{{solicitudId}}",
+            "estado"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Eliminar solicitud",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Estado 204\", function () {",
+              "  pm.response.to.have.status(204);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/solicitudes/{{solicitudId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "solicitudes",
+            "{{solicitudId}}"
+          ]
+        }
+      }
+    }
+  ]
+}
