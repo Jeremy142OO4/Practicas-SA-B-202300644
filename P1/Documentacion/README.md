@@ -14,6 +14,28 @@
 **Guatemala, 30 de Julio del 2026**
 # Academia API
 
+## Índice
+
+1. [Descripción](#descripcion)
+2. [Tecnologías utilizadas](#tecnologías-utilizadas)
+3. [Funcionalidades](#funcionalidades)
+4. [Estructura del proyecto](#estructura-del-proyecto)
+5. [Responsabilidad de las carpetas](#responsabilidad-de-las-carpetas)
+6. [Instalación](#instalación)
+7. [Configuración de variables de entorno](#configuración-de-variables-de-entorno)
+8. [Configuración de la base de datos](#configuración-de-la-base-de-datos)
+9. [Ejecución](#ejecución)
+10. [Endpoints](#endpoints)
+11. [Formato de respuestas](#formato-de-respuestas)
+12. [Validaciones](#validaciones)
+13. [Seguridad](#seguridad)
+14. [Principios SOLID](#principios-solid)
+15. [Código limpio](#código-limpio)
+16. [Pruebas con Postman](#pruebas-con-postman)
+17. [Verificación del proyecto](#verificación-del-proyecto)
+18. [Uso de inteligencia artificial](#uso-de-inteligencia-artificial)
+
+
 ### Descripcion
 API REST desarrollada en Go para administrar solicitudes operativas de una academia ficticia. Permite registrar, consultar, actualizar, cambiar el estado y eliminar solicitudes. Los datos se almacenan en PostgreSQL mediante Supabase.
 
