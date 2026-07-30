@@ -38,30 +38,34 @@ Necesito que me des cada detalle del paso a paso.
 
 ### Analisis critico
 #### ¿Qué partes de la respuesta fueron útiles?
-Fue muy util porque me permitio crear una estructura para la tabla de solicitud operativa en PostgreSQL. Me explico los tipos de datos de cada campo y el porque se uso. Me ayudo a colocar las reestricciones para la integridad de la informacion y me propuso usar indices para mejorar la busqueda y un mecanismo para actualizar automaticamente el campo updated_at
+La respuesta me sirvió porque me mostró cómo crear la tabla solicitudes_operativas en PostgreSQL. También me explicó qué tipo de dato utilizar en cada campo y cómo agregar restricciones para evitar información incorrecta.
+
+Además, me recomendó utilizar índices para mejorar las búsquedas y un trigger para actualizar automáticamente el campo updated_at.
+
 #### ¿Qué errores, riesgos o aspectos incompletos encontraste?
-Uno de los errores que tuvo la IA fue que al principio me incluyo mas elementos de los que solicite, como por ejemplo codigo python para la salida del json, arquitectura del proyecto cuando el objetivo era diseñar la base de datos.
+Al principio la IA agregó código y elementos de la arquitectura que no había solicitado, ya que solamente necesitaba diseñar la base de datos.
 
-Otro riesgo que encontre fue el uso de UUID. Aunque ofrezca una mayor seguridad y facilete el trabajo, tambien nos ocupa mas espacio en lugar de un identificador unico, pero se considero adecuado para el crecimiento a futuro de esta API
+También presentó el UUID como una opción más segura, pero realmente no reemplaza la seguridad del sistema. Su ventaja es que genera identificadores únicos y menos predecibles.
+
+Los índices de estado y prioridad pueden ser poco útiles en una tabla pequeña porque estos campos tienen pocos valores, pero decidí conservarlos para la práctica.
 #### ¿Qué recomendaciones aceptaste o rechazaste?
-Se acepto el uso de UUID como clave primaria porque nos evita identificadores consecutivos y ademas nos permite generarlos de manera seguda.
+Acepté utilizar UUID como clave primaria y las restricciones NOT NULL, CHECK y PRIMARY KEY para proteger la información.
 
-Tambien se acepto el uso de las restricciones NOT NULL, CHECK y PRIMARY KEY, ya que nos permite proteger la integridad de la informacion desde la base de datos
+También acepté utilizar NUMERIC(12,2) para el costo y un trigger para actualizar updated_at.
+
+No acepté agregar código o componentes que no fueran necesarios para la base de datos.
 #### ¿Cómo verificaste que el código fuera seguro y limpio?
-Se reviso que cada campo estuviera con su tipo adecuado de dato y que las restricciones evitaran valores no permitidos
+Revisé que cada campo tuviera un tipo de dato correcto y que los campos obligatorios utilizaran NOT NULL.
 
-Se verifico que la llave primaria de la tabla y los campos obligatorios usaran NOT NULL
+También comprobé que la prioridad estuviera entre 1 y 5, que el costo no fuera negativo y que solamente se aceptaran los estados definidos.
 
-Se reviso que los nombres de las tablas, campos y indice fueran descriptivos y se mantuviera las mismas reglas
+Revisé que los nombres de las tablas, restricciones e índices fueran claros y descriptivos.
 
 #### Ajustes realizados después del Prompt 1
 
-Después de revisar la respuesta se realizaron los siguientes ajustes:
-- Se utilizó UUID como identificador principal.
-- Se agregaron restricciones SQL para evitar datos inválidos.
-- Se limitó la prioridad a valores entre 1 y 5.
-- Se restringió el estado a registrada, en_proceso y finalizada.
-- Se evitó permitir costos negativos.
+Después de revisar la respuesta utilicé UUID como identificador principal y agregué restricciones para evitar datos inválidos.
+
+También limité la prioridad, los estados permitidos y los costos negativos. Finalmente, agregué índices y un trigger para mantener actualizado el campo updated_at.
 
 ### Prompt 2
 Estoy desarrollando una API REST para una academia ficticia utilizando Go, Fiber y PostgreSQL en Supabase.
@@ -98,64 +102,33 @@ No avances a la implementación de los endpoints hasta que la arquitectura esté
 
 #### ¿Qué partes de la respuesta fueron útiles?
 
-La respuesta permitió organizar el proyecto utilizando una arquitectura de monolito modular por capas.
-
-Fue útil separar el proyecto en las carpetas controller, service, repository, model, dto y routes, porque cada una tiene una responsabilidad específica.
-
-También fue útil incluir carpetas compartidas para errores, validaciones y respuestas, ya que esto permite evitar duplicación de código.
-
-La explicación de la carpeta config permitió comprender que las variables de entorno deben leerse desde un único lugar.
-
-La carpeta infrastructure/database también ayudó a separar la conexión con PostgreSQL de la lógica del negocio.
+La respuesta me sirvió porque me mostró cómo organizar el proyecto utilizando una arquitectura por capas. También me ayudó a separar el código en controller, service, repository, model, dto y routes para que cada carpeta tuviera una responsabilidad diferente. Además, me mostró cómo separar la configuración, la conexión con PostgreSQL, los errores, las respuestas y las validaciones.
 
 #### ¿Qué errores, riesgos o aspectos incompletos encontraste?
 
-El principal error fue que en una primera respuesta se comenzó a presentar código cuando se había solicitado únicamente diseñar la estructura del proyecto.
+El primer error fue que la IA comenzó a mostrar código cuando solamente le había pedido diseñar y explicar la estructura. También propuso varias carpetas que podían ser innecesarias para un proyecto pequeño, así que conservé únicamente las que necesitaba.
 
-También existía el riesgo de crear demasiadas carpetas para un proyecto pequeño. Por esa razón, se decidió mantener únicamente las carpetas necesarias y evitar subdivisiones innecesarias.
+Otro detalle fue que se agregaron varias variables de conexión en .env.example, pero el código solamente utiliza DATABASE_URL. Esto no afecta el funcionamiento, pero puede causar confusión.
 
-Otro riesgo era que la carpeta shared se convirtiera en un lugar donde se colocara cualquier archivo. Para evitarlo, se definió que solo debe contener elementos realmente reutilizables por varios módulos.
+También revisé que la carpeta shared no se utilizara para guardar cualquier archivo, sino solamente elementos compartidos como errores, respuestas y validaciones.
 
 #### ¿Qué recomendaciones aceptaste o rechazaste?
 
-Se aceptó utilizar una arquitectura de monolito modular porque permite mantener una sola aplicación, pero con sus funcionalidades organizadas en módulos independientes.
+Acepté utilizar una arquitectura de monolito modular porque me permite tener una sola aplicación bien organizada. También acepté separar controller, service y repository, utilizar variables de entorno y crear los archivos .env y .env.example.
 
-Se aceptó la separación entre controller, service y repository para evitar que una sola capa concentre toda la lógica.
-
-Se aceptó centralizar la configuración mediante variables de entorno.
-
-Se aceptó utilizar los archivos .env y .env.example.
-
-Se rechazó agregar carpetas adicionales que no fueran necesarias para el alcance actual del proyecto.
-
-También se rechazó colocar consultas SQL en el controlador o reglas de negocio en las rutas.
+No acepté agregar carpetas que no fueran necesarias. Tampoco acepté colocar consultas SQL en el controlador ni reglas de negocio dentro de las rutas.
 
 #### ¿Cómo verificaste que la estructura fuera segura y limpia?
 
-Se revisó que cada carpeta tuviera una única responsabilidad.
+Revisé que cada carpeta tuviera una responsabilidad clara. También comprobé que las peticiones siguieran el flujo Routes, Controller, Service, Repository y Base de datos.
 
-También se verificó que las dependencias siguieran el flujo:
-
-Routes → Controller → Service → Repository → Base de datos
-
-Se comprobó que el servicio no dependiera directamente de Fiber y que el controlador no accediera directamente a PostgreSQL.
-
-Además, se revisó que las credenciales de Supabase se almacenaran en variables de entorno y no directamente en el código.
-
-El archivo .env se agregó al .gitignore para evitar que las credenciales fueran publicadas en GitHub.
+Verifiqué que el controlador no tuviera consultas SQL y que el servicio no dependiera directamente de Fiber. También confirmé que las credenciales de Supabase estuvieran en .env y que este archivo fuera ignorado por Git.
 
 #### Ajustes realizados después del Prompt 2
 
-Después de revisar la respuesta se realizaron los siguientes ajustes:
+Después de revisar la respuesta mantuve una arquitectura de monolito modular y separé las responsabilidades entre controller, service y repository. También creé un módulo específico para solicitudes, separé los modelos y los DTO, centralicé los errores, las respuestas y las validaciones, y coloqué la conexión con PostgreSQL dentro de infrastructure.
 
-Se mantuvo una arquitectura de monolito modular.
-Se separaron las responsabilidades entre controller, service y repository.
-Se creó un módulo específico para solicitudes.
-Se separaron los modelos y los DTO.
-Se centralizaron los errores, las respuestas y las validaciones reutilizables.
-Se colocó la conexión con PostgreSQL dentro de infrastructure/database.
-Se preparó la configuración mediante variables de entorno.
-Se creó un archivo .env.example.
+Finalmente, configuré las variables de entorno y agregué .env al archivo .gitignore.
 
 ### Prompt 3
 Estoy desarrollando una API REST para una academia ficticia utilizando Go, Fiber y PostgreSQL en Supabase.
@@ -252,81 +225,23 @@ Genera todos los archivos necesarios para que los 5 endpoints funcionen, indican
 ### Analisis critico
 #### ¿Qué partes de la respuesta fueron útiles?
 
-La respuesta fue útil porque permitió implementar los cinco endpoints solicitados:
-
-Obtener todas las solicitudes.
-Registrar una solicitud.
-Actualizar completamente una solicitud.
-Eliminar una solicitud.
-Actualizar únicamente el estado.
-
-También fue útil utilizar DTO separados para crear, actualizar completamente y actualizar solamente el estado.
-
-La implementación respetó la separación de responsabilidades. El controlador recibió las peticiones HTTP, el servicio aplicó las reglas de negocio y el repositorio se encargó de las operaciones con PostgreSQL.
-
-Además, se incluyó validación de entradas, manejo centralizado de errores, respuestas JSON uniformes y códigos HTTP apropiados.
+La respuesta me sirvió porque me mostró cómo crear los cinco endpoints que necesitaba. También me ayudó a ordenar el proyecto y a separar el código en controlador, servicio y repositorio. Además, me mostró cómo utilizar DTO, validaciones, respuestas JSON y códigos HTTP correctos.
 
 #### ¿Qué errores, riesgos o aspectos incompletos encontraste?
 
-Uno de los aspectos incompletos fue que la compilación no pudo verificarse completamente dentro del entorno utilizado debido a restricciones de acceso para descargar dependencias.
-
-También se detectó que utilizar float64 para valores monetarios puede producir pequeñas diferencias de precisión. Para un proyecto académico es aceptable, pero en un sistema financiero sería mejor utilizar una representación decimal más estricta.
-
-Otro riesgo identificado fue que las transiciones de estado todavía permiten cualquier cambio entre los estados válidos. Por ejemplo, una solicitud finalizada podría volver a registrada. Si el negocio requiere un flujo específico, debería agregarse una regla para controlar estas transiciones.
-
-También sería necesario agregar autenticación y autorización antes de utilizar la API en producción.
+Encontré que la IA no validó correctamente los datos de PUT y PATCH. PUT permitía omitir algunos campos y PATCH podía recibir campos adicionales, aunque solamente debía aceptar el estado. También se utilizó float64 para el costo, lo cual puede causar pequeñas diferencias en los decimales.
 
 #### ¿Qué recomendaciones aceptaste o rechazaste?
 
-Se aceptó utilizar consultas SQL parametrizadas con valores como $1, $2 y $3, porque reducen el riesgo de inyección SQL.
-
-Se aceptó utilizar DTO diferentes para cada operación.
-
-Se aceptó centralizar el manejo de errores para mantener respuestas consistentes.
-
-Se aceptó devolver códigos HTTP como 200, 201, 204, 400, 404 y 500, según el resultado de cada operación.
-
-Se aceptó reutilizar funciones de validación y conversión para evitar duplicación.
-
-Se rechazó concatenar directamente los valores enviados por el usuario dentro de las consultas SQL.
-
-También se rechazó devolver errores internos completos al cliente, porque podrían exponer información sobre la aplicación o la base de datos.
+Acepté utilizar consultas SQL parametrizadas, DTO separados, validaciones y un manejo centralizado de errores. No acepté concatenar los datos directamente en las consultas SQL porque podría causar una inyección SQL. Tampoco acepté mostrar los errores internos de PostgreSQL al usuario.
 
 #### ¿Cómo verificaste que el código fuera seguro y limpio?
 
-Se comprobó que todas las consultas utilizaran parámetros y que ningún valor recibido desde el cliente se concatenara directamente con el SQL.
-
-También se revisó que las validaciones controlaran:
-
-Campos obligatorios.
-Prioridad entre 1 y 5.
-Costo no negativo.
-Estados permitidos.
-Identificadores con formato UUID válido.
-
-Se verificó que los controladores no contuvieran consultas SQL ni reglas complejas de negocio.
-
-También se comprobó que el repositorio no manejara respuestas HTTP y que el servicio no dependiera directamente de Fiber.
-
-Se centralizaron las respuestas y los errores para evitar formatos diferentes en cada endpoint.
-
-Además, las credenciales de Supabase fueron almacenadas en el archivo .env, el cual se encuentra excluido del control de versiones.
+Revisé que las consultas SQL utilizaran parámetros y que los datos recibidos fueran validados. También comprobé que el controlador, el servicio y el repositorio tuvieran responsabilidades diferentes. Guardé las credenciales en .env y ejecuté go test ./... y go vet ./... para comprobar el código.
 
 #### Ajustes realizados después del Prompt 3
 
-Después de revisar la respuesta se realizaron los siguientes ajustes:
-
-Se agregaron validaciones para todos los datos recibidos.
-Se crearon DTO separados para crear, actualizar y modificar el estado.
-Se utilizaron consultas SQL parametrizadas.
-Se evitó la concatenación directa de datos en las consultas.
-Se centralizó el manejo de errores.
-Se estandarizaron las respuestas JSON.
-Se utilizaron códigos HTTP apropiados.
-Se validaron los UUID antes de enviarlos al repositorio.
-Se reutilizaron funciones comunes para evitar duplicación.
-Se mantuvieron funciones con una responsabilidad específica.
-Se evitó exponer errores internos de PostgreSQL al cliente.
+Modifiqué PUT para que exija todos los campos de la solicitud, excepto el identificador. También modifiqué PATCH para que solamente acepte el campo estado. Finalmente, agregué validaciones para rechazar campos adicionales y pruebas para comprobar que todo funcionara correctamente.
 
 ### Conclusión general
 

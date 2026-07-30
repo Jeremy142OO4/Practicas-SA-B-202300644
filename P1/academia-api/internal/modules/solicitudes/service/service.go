@@ -87,11 +87,15 @@ func (s *solicitudService) Crear(
 	ctx context.Context,
 	input dto.CrearSolicitudRequest,
 ) (*dto.SolicitudResponse, error) {
+	if err := validarCamposCrear(input); err != nil {
+		return nil, err
+	}
+
 	err := validarDatos(
-		input.Titulo,
-		input.AreaSolicitante,
-		input.Prioridad,
-		input.CostoEstimado,
+		*input.Titulo,
+		*input.AreaSolicitante,
+		*input.Prioridad,
+		*input.CostoEstimado,
 	)
 	if err != nil {
 		return nil, err
@@ -99,13 +103,13 @@ func (s *solicitudService) Crear(
 
 	solicitud := model.SolicitudOperativa{
 		Titulo: validator.LimpiarTexto(
-			input.Titulo,
+			*input.Titulo,
 		),
 		AreaSolicitante: validator.LimpiarTexto(
-			input.AreaSolicitante,
+			*input.AreaSolicitante,
 		),
-		Prioridad:     input.Prioridad,
-		CostoEstimado: input.CostoEstimado,
+		Prioridad:     *input.Prioridad,
+		CostoEstimado: *input.CostoEstimado,
 		Estado:        model.EstadoRegistrada,
 	}
 
@@ -135,17 +139,21 @@ func (s *solicitudService) Actualizar(
 		return nil, err
 	}
 
+	if err := validarCamposActualizar(input); err != nil {
+		return nil, err
+	}
+
 	err = validarDatos(
-		input.Titulo,
-		input.AreaSolicitante,
-		input.Prioridad,
-		input.CostoEstimado,
+		*input.Titulo,
+		*input.AreaSolicitante,
+		*input.Prioridad,
+		*input.CostoEstimado,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	estado := model.Estado(input.Estado)
+	estado := model.Estado(*input.Estado)
 
 	if !estado.EsValido() {
 		return nil, errorsapp.Nuevo(
@@ -158,13 +166,13 @@ func (s *solicitudService) Actualizar(
 	solicitud := model.SolicitudOperativa{
 		ID: uuidValue,
 		Titulo: validator.LimpiarTexto(
-			input.Titulo,
+			*input.Titulo,
 		),
 		AreaSolicitante: validator.LimpiarTexto(
-			input.AreaSolicitante,
+			*input.AreaSolicitante,
 		),
-		Prioridad:     input.Prioridad,
-		CostoEstimado: input.CostoEstimado,
+		Prioridad:     *input.Prioridad,
+		CostoEstimado: *input.CostoEstimado,
 		Estado:        estado,
 	}
 
@@ -215,7 +223,11 @@ func (s *solicitudService) ActualizarEstado(
 		return nil, err
 	}
 
-	estado := model.Estado(input.Estado)
+	if input.Estado == nil {
+		return nil, errorCampoObligatorio("estado")
+	}
+
+	estado := model.Estado(*input.Estado)
 
 	if !estado.EsValido() {
 		return nil, errorsapp.Nuevo(
@@ -243,6 +255,62 @@ func (s *solicitudService) ActualizarEstado(
 	resultado := convertirAResponse(*solicitud)
 
 	return &resultado, nil
+}
+
+func validarCamposCrear(
+	input dto.CrearSolicitudRequest,
+) error {
+	if input.Titulo == nil {
+		return errorCampoObligatorio("titulo")
+	}
+
+	if input.AreaSolicitante == nil {
+		return errorCampoObligatorio("area_solicitante")
+	}
+
+	if input.Prioridad == nil {
+		return errorCampoObligatorio("prioridad")
+	}
+
+	if input.CostoEstimado == nil {
+		return errorCampoObligatorio("costo_estimado")
+	}
+
+	return nil
+}
+
+func validarCamposActualizar(
+	input dto.ActualizarSolicitudRequest,
+) error {
+	if input.Titulo == nil {
+		return errorCampoObligatorio("titulo")
+	}
+
+	if input.AreaSolicitante == nil {
+		return errorCampoObligatorio("area_solicitante")
+	}
+
+	if input.Prioridad == nil {
+		return errorCampoObligatorio("prioridad")
+	}
+
+	if input.CostoEstimado == nil {
+		return errorCampoObligatorio("costo_estimado")
+	}
+
+	if input.Estado == nil {
+		return errorCampoObligatorio("estado")
+	}
+
+	return nil
+}
+
+func errorCampoObligatorio(nombre string) error {
+	return errorsapp.Nuevo(
+		errorsapp.TipoValidacion,
+		nombre+" es obligatorio",
+		nil,
+	)
 }
 
 func validarDatos(

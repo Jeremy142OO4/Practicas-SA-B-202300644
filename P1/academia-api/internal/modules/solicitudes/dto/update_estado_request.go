@@ -1,5 +1,5 @@
 package dto
 
 type ActualizarEstadoRequest struct {
-	Estado string `json:"estado"`
+	Estado *string `json:"estado"`
 }

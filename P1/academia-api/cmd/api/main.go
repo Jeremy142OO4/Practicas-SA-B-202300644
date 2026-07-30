@@ -17,6 +17,7 @@ import (
 	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/routes"
 	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/modules/solicitudes/service"
 	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/shared/response"
+	"github.com/Jeremy142OO4/Practicas-SA-B-202300644/P1/academia-api/internal/shared/validator"
 )
 
 func main() {
@@ -62,7 +63,8 @@ func main() {
 
 	app := fiber.New(
 		fiber.Config{
-			AppName: cfg.App.Name,
+			AppName:     cfg.App.Name,
+			JSONDecoder: validator.DecodificarJSONEstricto,
 		},
 	)
 
