@@ -1,0 +1,26 @@
+services:
+  database:
+    build:
+      context: ./backend/database
+      dockerfile: Dockerfile
+    container_name: practica2-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-practica2}
+      POSTGRES_USER: ${POSTGRES_USER:-practica2_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-practica2_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: practica2-postgres-data
+
