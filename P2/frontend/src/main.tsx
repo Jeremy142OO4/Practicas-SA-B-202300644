@@ -1,10 +1,10 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { StrictMode as ModoEstricto } from "react";
+import { createRoot as crearRaiz } from "react-dom/client";
+import Aplicacion from "./Aplicacion.tsx";
+import "./estilos.css";
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+crearRaiz(document.getElementById("raiz")!).render(
+  <ModoEstricto>
+    <Aplicacion />
+  </ModoEstricto>,
+);
