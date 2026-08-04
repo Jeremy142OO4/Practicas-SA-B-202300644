@@ -1,0 +1,6 @@
+.env
+database/
+coverage.out
+bin/
+build/
+*.test

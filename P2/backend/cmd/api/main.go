@@ -17,6 +17,18 @@ import (
 
 	"practica2/backend/internal/config"
 	"practica2/backend/internal/infrastructure/database"
+	controlador "practica2/backend/internal/modules/auth/controller"
+	rutas "practica2/backend/internal/modules/auth/routes"
+	servicio "practica2/backend/internal/modules/auth/service"
+	controladorProtegidas "practica2/backend/internal/modules/protected/controller"
+	rutasProtegidas "practica2/backend/internal/modules/protected/routes"
+	controladorUsuarios "practica2/backend/internal/modules/users/controller"
+	repositorio "practica2/backend/internal/modules/users/repository"
+	rutasUsuarios "practica2/backend/internal/modules/users/routes"
+	servicioUsuarios "practica2/backend/internal/modules/users/service"
+	"practica2/backend/internal/shared/cookies"
+	seguridad "practica2/backend/internal/shared/crypto"
+	token "practica2/backend/internal/shared/jwt"
 	"practica2/backend/internal/shared/response"
 )
 
@@ -32,6 +44,55 @@ func main() {
 		log.Fatalf("error al iniciar la base de datos: %v", err)
 	}
 	defer pool.Close()
+
+	cifrador, err := seguridad.NuevoCifradorAES(config.Seguridad.ClaveAES)
+	if err != nil {
+		log.Fatalf("error al iniciar el cifrado: %v", err)
+	}
+	generadorCorreo, err := seguridad.NuevoGeneradorCorreo(config.Seguridad.ClaveCorreo)
+	if err != nil {
+		log.Fatalf("error al iniciar el indice de correo: %v", err)
+	}
+	vigencia := time.Duration(config.JWT.MinutosExpiracion) * time.Minute
+	gracia := time.Duration(config.JWT.MinutosGracia) * time.Minute
+	gestorToken, err := token.NuevoGestor(config.JWT.Secreto, vigencia, gracia, config.JWT.Emisor)
+	if err != nil {
+		log.Fatalf("error al iniciar JWT: %v", err)
+	}
+	gestorCookies, err := cookies.NuevoGestorSesion(config.Cookie.Segura, config.Cookie.SameSite, vigencia+gracia)
+	if err != nil {
+		log.Fatalf("error al iniciar cookies: %v", err)
+	}
+
+	repoUsuarios, err := repositorio.NuevoRepositorioPostgres(pool)
+	if err != nil {
+		log.Fatalf("error al iniciar usuarios: %v", err)
+	}
+	registro, err := servicio.NuevoServicioRegistro(repoUsuarios, repoUsuarios, cifrador, generadorCorreo)
+	if err != nil {
+		log.Fatalf("error al iniciar registro: %v", err)
+	}
+	login, err := servicio.NuevoServicioLogin(repoUsuarios, cifrador, gestorToken, generadorCorreo)
+	if err != nil {
+		log.Fatalf("error al iniciar login: %v", err)
+	}
+	auth, err := controlador.NuevaAutenticacion(registro, login, gestorCookies, gestorToken)
+	if err != nil {
+		log.Fatalf("error al iniciar autenticacion: %v", err)
+	}
+	consultaUsuarios, err := servicioUsuarios.NuevoServicioConsulta(repoUsuarios, cifrador)
+	if err != nil {
+		log.Fatalf("error al iniciar consulta de usuarios: %v", err)
+	}
+	estadoUsuarios, err := servicioUsuarios.NuevoServicioEstado(repoUsuarios, cifrador)
+	if err != nil {
+		log.Fatalf("error al iniciar estados de usuarios: %v", err)
+	}
+	usuarios, err := controladorUsuarios.NuevosUsuarios(consultaUsuarios, estadoUsuarios)
+	if err != nil {
+		log.Fatalf("error al iniciar administracion de usuarios: %v", err)
+	}
+	protegidas := controladorProtegidas.NuevaProtegidas()
 
 	app := fiber.New(fiber.Config{
 		AppName:               "API de Autenticacion - Practica 2",
@@ -68,6 +129,11 @@ func main() {
 		}
 		return respuesta.Exitosa(ctx, fiber.StatusOK, "Servicio disponible", fiber.Map{"database": "connected"})
 	})
+
+	api := app.Group("/api/v1")
+	rutas.RegistrarAutenticacion(api, auth, gestorCookies, gestorToken)
+	rutasUsuarios.RegistrarUsuarios(api, usuarios, gestorCookies, gestorToken)
+	rutasProtegidas.RegistrarProtegidas(api, protegidas, gestorCookies, gestorToken)
 
 	go func() {
 		direccion := fmt.Sprintf(":%d", config.Aplicacion.Puerto)

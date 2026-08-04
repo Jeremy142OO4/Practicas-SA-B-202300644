@@ -20,7 +20,51 @@ services:
       retries: 10
       start_period: 10s
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: practica2-backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      APP_PORT: 8080
+      FRONTEND_URL: http://localhost:${FRONTEND_PORT:-5173}
+      DATABASE_URL: postgres://${POSTGRES_USER:-practica2_user}:${POSTGRES_PASSWORD:-practica2_password}@database:5432/${POSTGRES_DB:-practica2}?sslmode=disable
+      AES_KEY: ${AES_KEY:-j2xztqsjTNGsofBPhs8bLn616i7vlOFQt3VUj21KbCc=}
+      EMAIL_INDEX_KEY: ${EMAIL_INDEX_KEY:-uk+bcsNpQJeuV6mmOIWQoqAPQ7icnYZt4sKul7d2Qsk=}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-long-random-secret-of-at-least-32-characters}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-1}
+      JWT_RENEWAL_GRACE_MINUTES: ${JWT_RENEWAL_GRACE_MINUTES:-1}
+      JWT_ISSUER: ${JWT_ISSUER:-practica2-api}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-Lax}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api/v1
+    container_name: practica2-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     name: practica2-postgres-data
-
