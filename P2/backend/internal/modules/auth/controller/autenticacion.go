@@ -71,10 +71,6 @@ func (controlador *Autenticacion) VerSesion(ctx *fiber.Ctx) error {
 	})
 }
 
-func (controlador *Autenticacion) VerAdministracion(ctx *fiber.Ctx) error {
-	return respuesta.Exitosa(ctx, fiber.StatusOK, "Acceso de administrador autorizado", nil)
-}
-
 func (controlador *Autenticacion) Registrar(ctx *fiber.Ctx) error {
 	var solicitud dto.SolicitudRegistro
 	if err := ctx.BodyParser(&solicitud); err != nil {

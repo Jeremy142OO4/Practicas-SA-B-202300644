@@ -1,22 +1,24 @@
-# Local PostgreSQL database
+# Base de datos PostgreSQL local
 
-The database runs in Docker and is initialized automatically from `init.sql` the first
-time its named volume is created.
+La base de datos se ejecuta en Docker y se inicializa automáticamente mediante
+`init.sql` la primera vez que se crea el volumen con nombre.
 
-## Test users
+## Usuarios de prueba
 
-| Role | Email | Password |
+| Rol | Correo | Contraseña |
 | --- | --- | --- |
 | ADMIN | `admin@practica.local` | `Admin123!` |
 | CLIENTE | `cliente@practica.local` | `Cliente123!` |
 
-Names, emails, and passwords are stored as AES-256-GCM ciphertext. Email uniqueness is
-enforced through an HMAC-SHA256 blind index. The development keys that decrypt these
-records are defined in `backend/.env.example` and must never be reused in production.
+Los nombres, correos y contraseñas se almacenan como texto cifrado con
+AES-256-GCM. La unicidad del correo se controla mediante un índice ciego
+HMAC-SHA256. Las claves de desarrollo que permiten descifrar estos registros se
+encuentran definidas en `backend/.env.example` y nunca deben reutilizarse en
+producción.
 
-## Commands
+## Comandos
 
-From the project root:
+Ejecutar desde la raíz del proyecto:
 
 ```bash
 docker compose up -d --build
@@ -24,8 +26,8 @@ docker compose ps
 docker compose down
 ```
 
-To recreate the schema and seed data from scratch, remove the development volume and
-start the service again:
+Para crear nuevamente el esquema y los datos iniciales desde cero, se debe
+eliminar el volumen de desarrollo e iniciar los servicios otra vez:
 
 ```bash
 docker compose down -v

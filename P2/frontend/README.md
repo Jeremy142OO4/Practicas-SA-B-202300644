@@ -1,7 +1,7 @@
 # Interfaz
 
-Aplicacion React con TypeScript y Vite para la Practica 2 de Autenticacion y
-Autorizacion.
+Aplicación React con TypeScript y Vite para la Práctica 2 de autenticación y
+autorización.
 
 ## Comandos
 
@@ -12,5 +12,5 @@ pnpm lint
 pnpm build
 ```
 
-La aplicacion consumira la API mediante cookies HTTP-only. El JWT no se guardara en
+La aplicación consume la API mediante cookies HTTP-only. El JWT no se guarda en
 `localStorage` ni `sessionStorage`.

@@ -17,5 +17,4 @@ func RegistrarAutenticacion(api fiber.Router, auth *controlador.Autenticacion, g
 	ruta.Post("/logout", auth.CerrarSesion)
 	protegida := ruta.Group("", middleware.Autenticar(gestorCookies, gestorToken))
 	protegida.Get("/session", auth.VerSesion)
-	protegida.Get("/admin", middleware.Autorizar("ADMIN"), auth.VerAdministracion)
 }
