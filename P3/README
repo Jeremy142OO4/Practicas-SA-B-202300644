@@ -1,1 +1,884 @@
-.
+# UNIVERSIDAD DE SAN CARLOS DE GUATEMALA
+
+## FACULTAD DE INGENIERÍA
+
+### SOFTWARE AVANZADO
+
+**CATEDRÁTICO:** Ing. Marco Tulio Aldana Prillwitz
+**TUTOR ACADÉMICO:** Kevin Pozuelos Estrada
+
+**Nombre:** Jeremy Estuardo Orellana Aldana
+**Carné:** 202300644
+**Sección:** B
+
+# Práctica 3 - Diseño de Arquitectura Bancaria basada en Microservicios
+
+ 
+
+## Índice
+
+1. Descripción del problema
+2. Objetivos
+3. Alcance de la solución
+4. Arquitectura general
+5. Microservicios
+6. Integración con la Práctica 2
+7. Autenticación y OAuth corporativo
+8. Roles y permisos
+9. Flujo general del sistema
+10. Flujo de aprobación Maker-Checker-Authorizer
+11. Reglas de validación del negocio
+12. Almacenamiento de archivos CSV
+13. Comunicación entre microservicios
+14. API Gateway
+15. Integración con el Core Bancario
+16. Sistema de notificaciones
+17. Logging y auditoría
+18. Historial de lotes y transacciones
+19. Bases de datos
+20. Diagramas ER
+21. Diagramas de clases UML
+22. Diagramas de secuencia UML
+23. Diagrama de componentes UML
+24. Tecnologías utilizadas
+25. Patrones de diseño y arquitectura
+
+
+ 
+
+# 1. Descripción del problema
+
+Explicar brevemente el problema del sistema monolítico actual del banco y por qué se propone una arquitectura basada en microservicios.
+
+ 
+
+# 2. Objetivos
+
+## Objetivo general
+
+Definir el objetivo principal de la nueva arquitectura.
+
+## Objetivos específicos
+
+* Diseñar una arquitectura basada en microservicios.
+* Separar las responsabilidades del sistema.
+* Permitir el procesamiento de grandes cantidades de transacciones.
+* Implementar un flujo de aprobación de tres pasos.
+* Integrar el sistema con servicios externos.
+
+ 
+
+# 3. Alcance de la solución
+
+Explicar qué funcionalidades cubrirá nuestro diseño.
+
+Por ejemplo:
+
+* Autenticación.
+* Carga de archivos CSV.
+* Gestión de lotes.
+* Validación de transacciones.
+* Aprobaciones.
+* Integración bancaria.
+* Notificaciones.
+* Historial.
+* Auditoría.
+
+ 
+
+# 4. Arquitectura General
+
+Explicación sencilla de cómo estará organizada la solución.
+
+Aquí se colocará:
+
+**Diagrama de Arquitectura General**
+
+Después del diagrama se explicará brevemente cada componente.
+
+ 
+
+# 5. Microservicios
+
+La solución estará compuesta por los siguientes microservicios:
+
+1. Autenticación y Autorización.
+2. Gestión de Lotes y Transacciones.
+3. Validación.
+4. Aprobaciones.
+5. Integración con Core Bancario.
+6. Notificaciones.
+7. Auditoría e Historial.
+
+ 
+
+## 5.1 Microservicio de Autenticación y Autorización
+
+### Responsabilidad
+
+Este microservicio se encarga de identificar a los usuarios que ingresan al sistema y verificar qué acciones pueden realizar según su rol. También se encarga de manejar la sesión del usuario y trabajar junto con el servicio OAuth corporativo.
+
+### Entradas
+
+* Correo y contraseña del usuario.
+* Token de sesión.
+* Información recibida desde OAuth corporativo.
+* Rol del usuario.
+
+### Salidas
+
+* Sesión iniciada correctamente.
+* Token JWT.
+* Información básica del usuario.
+* Rol y permisos del usuario.
+* Mensajes cuando el usuario no tiene acceso.
+
+### Funcionalidades
+
+* Registrar usuarios.
+* Iniciar y cerrar sesión.
+* Generar y validar tokens JWT.
+* Renovar la sesión.
+* Verificar los roles y permisos.
+* Integrarse con OAuth corporativo.
+* Controlar el acceso a las funciones del sistema.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar la información relacionada con los usuarios y sus roles.
+
+Las tablas principales seran:
+
+* `usuarios`
+* `roles`
+
+### Relación con otros servicios
+
+Este microservicio se relaciona con el API Gateway y con los demás microservicios, ya que permite comprobar quién es el usuario y qué permisos tiene antes de realizar una acción.
+
+## 5.2 Microservicio de Gestión de Lotes y Transacciones
+
+### Responsabilidad
+
+Este microservicio se encarga de recibir y administrar los lotes de transacciones que son cargados mediante archivos CSV. También mantiene la información principal de cada lote y de las transacciones que contiene.
+
+### Entradas
+
+* Archivo CSV.
+* Usuario que realiza la carga.
+* Información de las transacciones.
+* Cambios en el estado del lote.
+
+### Salidas
+
+* Lote creado.
+* Transacciones registradas.
+* Estado actual del lote.
+* Información del archivo cargado.
+
+### Funcionalidades
+
+* Crear nuevos lotes.
+* Recibir archivos CSV.
+* Registrar las transacciones del archivo.
+* Consultar la información de un lote.
+* Consultar las transacciones de un lote.
+* Actualizar el estado general del lote.
+* Mantener la relación entre el lote y su archivo CSV.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar los lotes y las transacciones.
+
+Las tablas principales seran:
+
+* `lotes`
+* `transacciones`
+* `archivos`
+
+### Relación con otros servicios
+
+Se comunica con el microservicio de Validación para revisar las transacciones y con el microservicio de Aprobaciones cuando el lote esté listo para iniciar el proceso de aprobación. También envía información al servicio de Auditoría e Historial.
+
+## 5.3 Microservicio de Validación
+
+### Responsabilidad
+
+Este microservicio se encarga de revisar que las transacciones de un lote cumplan con las reglas del banco antes de pasar al proceso de aprobación.
+
+### Entradas
+
+* Lote de transacciones.
+* Datos de las cuentas.
+* Montos de las transacciones.
+* Información necesaria para aplicar las reglas del banco.
+
+### Salidas
+
+* Resultado de la validación.
+* Transacciones válidas.
+* Transacciones con errores.
+* Motivo por el cual una transacción fue rechazada.
+
+### Funcionalidades
+
+* Verificar que las cuentas sean válidas.
+* Revisar el saldo disponible.
+* Revisar los límites permitidos.
+* Aplicar controles para prevenir posibles fraudes.
+* Registrar los resultados de cada validación.
+* Indicar si un lote puede continuar al proceso de aprobación.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar los resultados de las validaciones y las reglas utilizadas.
+
+Las tablas principales seran:
+
+* `resultados_validacion`
+* `reglas_validacion`
+
+### Relación con otros servicios
+
+Recibe las transacciones desde Gestión de Lotes y Transacciones. Si el lote pasa las validaciones, informa al microservicio de Aprobaciones para que pueda continuar el proceso. También registra sus acciones mediante Auditoría e Historial.
+
+## 5.4 Microservicio de Aprobaciones
+
+### Responsabilidad
+
+Este microservicio se encarga de controlar el proceso de aprobación de tres pasos que deben completar distintos usuarios antes de enviar un lote al Core Bancario.
+
+### Entradas
+
+* Lote validado.
+* Usuario que realiza la aprobación.
+* Rol del usuario.
+* Decisión de aprobar o rechazar.
+
+### Salidas
+
+* Estado de la aprobación.
+* Usuario que realizó la acción.
+* Lote aprobado o rechazado.
+* Confirmación cuando se completan los tres pasos.
+
+### Funcionalidades
+
+* Controlar el paso Maker.
+* Controlar el paso Checker.
+* Controlar el paso Authorizer.
+* Verificar que cada paso sea realizado por el usuario correspondiente.
+* Registrar aprobaciones y rechazos.
+* Actualizar el estado del lote.
+* Indicar cuando el lote está completamente aprobado.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar el proceso de aprobación de cada lote.
+
+Las tablas principales seran:
+
+* `aprobaciones`
+* `pasos_aprobacion`
+
+### Relación con otros servicios
+
+Recibe los lotes que fueron aprobados por el microservicio de Validación. Cuando se completa el paso Authorizer, informa al microservicio de Integración con Core Bancario para continuar con el procesamiento. También puede enviar un evento al servicio de Notificaciones y registrar las acciones en Auditoría e Historial.
+
+## 5.5 Microservicio de Integración con Core Bancario
+
+### Responsabilidad
+
+Este microservicio se encarga de comunicar nuestro sistema con el Core Bancario externo. Su función principal es enviar las transacciones que ya fueron aprobadas y recibir el resultado del procesamiento.
+
+### Entradas
+
+* Lote completamente aprobado.
+* Transacciones que deben ser procesadas.
+* Información necesaria para comunicarse con el Core Bancario.
+
+### Salidas
+
+* Resultado enviado por el Core Bancario.
+* Confirmación de envío.
+* Estado del procesamiento.
+* Información de errores si ocurre algún problema.
+
+### Funcionalidades
+
+* Recibir lotes aprobados.
+* Preparar la información para enviarla al Core Bancario.
+* Enviar las transacciones.
+* Recibir la respuesta del Core Bancario.
+* Manejar errores de comunicación.
+* Registrar el resultado del procesamiento.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar los intentos de envío y las respuestas recibidas desde el Core Bancario.
+
+Las tablas principales seran:
+
+* `solicitudes_core`
+* `respuestas_core`
+
+### Relación con otros servicios
+
+Recibe los lotes desde el microservicio de Aprobaciones. Se comunica directamente con el Core Bancario externo y registra los resultados mediante Auditoría e Historial.
+
+## 5.6 Microservicio de Notificaciones
+
+### Responsabilidad
+
+Este microservicio se encarga de enviar los correos relacionados con el procesamiento de las transacciones.
+
+### Entradas
+
+* Información del lote.
+* Datos de los clientes o beneficiarios.
+* Tipo de notificación que debe enviarse.
+* Estado de la transacción.
+
+### Salidas
+
+* Correo enviado.
+* Confirmación del envío.
+* Estado de la notificación.
+* Información de error si el correo no pudo enviarse.
+
+### Funcionalidades
+
+* Recibir solicitudes de notificación.
+* Preparar el contenido del correo.
+* Enviar correos a los clientes o beneficiarios.
+* Registrar si el correo fue enviado correctamente.
+* Registrar errores de envío.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar el estado de las notificaciones enviadas.
+
+Las tablas principales seran:
+
+* `notificaciones`
+* `destinatarios_notificacion`
+
+### Relación con otros servicios
+
+Se comunica principalmente con el microservicio de Aprobaciones cuando un lote completa los tres pasos de aprobación. También registra el resultado de cada correo en Auditoría e Historial.
+
+## 5.7 Microservicio de Auditoría e Historial
+
+### Responsabilidad
+
+Este microservicio se encarga de guardar un registro de las acciones importantes que ocurren dentro del sistema. También permite consultar el historial de los lotes y transacciones que han sido procesados.
+
+### Entradas
+
+* Acciones realizadas por los usuarios.
+* Cambios de estado.
+* Aprobaciones y rechazos.
+* Resultados de validaciones.
+* Resultados del Core Bancario.
+* Errores ocurridos en los servicios.
+
+### Salidas
+
+* Historial de un lote.
+* Historial de una transacción.
+* Registro de acciones realizadas.
+* Información para consultas de auditoría.
+
+### Funcionalidades
+
+* Registrar acciones importantes del sistema.
+* Registrar qué usuario realizó una acción.
+* Guardar fecha y hora de cada acción.
+* Registrar cambios de estado.
+* Registrar errores.
+* Consultar el historial de lotes.
+* Consultar el historial de transacciones.
+* Permitir consultar información de auditoría.
+
+### Base de datos
+
+Este microservicio tendrá su propia base de datos para guardar el historial y los registros generados por los demás servicios.
+
+Las tablas principales pueden ser:
+
+* `registros_auditoria`
+* `historial_lotes`
+* `historial_transacciones`
+
+### Relación con otros servicios
+
+Este microservicio recibe información de todos los demás servicios, ya que debe registrar las acciones importantes que ocurren dentro del sistema. También permite consultar el historial de los lotes y transacciones procesadas.
+
+ 
+
+# 6. Integración con la Práctica 2
+
+Explicar cómo el módulo de autenticación y autorización desarrollado en la Práctica 2 se utilizará en la nueva arquitectura.
+
+Para esta práctica se representará como un microservicio independiente.
+
+Explicar:
+
+* Usuarios.
+* Login.
+* JWT.
+* Roles.
+* Renovación de sesión.
+* Autorización.
+* Base de datos de usuarios.
+
+ 
+
+# 7. Autenticación y OAuth Corporativo
+
+Explicar cómo trabajarán juntos:
+
+* OAuth corporativo.
+* Microservicio de autenticación de P2.
+* JWT.
+* API Gateway.
+* Microservicios protegidos.
+
+ 
+
+# 8. Roles y Permisos
+
+Definir los roles utilizados en el sistema.
+
+Por ejemplo:
+
+* ADMIN.
+* CLIENTE.
+* MAKER.
+* CHECKER.
+* AUTHORIZER.
+
+Explicar qué acciones puede realizar cada rol.
+
+ 
+
+# 9. Flujo General del Sistema
+
+El sistema inicia cuando un usuario ingresa a la aplicación. Primero se verifica su identidad y su rol para determinar qué acciones puede realizar dentro del sistema.
+
+El flujo general será el siguiente:
+
+1. **Inicio de sesión**
+
+   El usuario ingresa sus credenciales. El microservicio de Autenticación y Autorización verifica la información del usuario, su rol y sus permisos. También se toma en cuenta la integración con el OAuth corporativo.
+
+2. **Carga del archivo CSV**
+
+   Un usuario autorizado carga un archivo CSV que contiene varias transacciones. El microservicio de Gestión de Lotes y Transacciones recibe el archivo y crea un nuevo lote.
+
+3. **Almacenamiento del archivo**
+
+   El archivo CSV se guarda en el almacenamiento definido para el sistema. También se registra la información necesaria para poder relacionar el archivo con el lote y recuperarlo posteriormente.
+
+4. **Registro de las transacciones**
+
+   El contenido del archivo CSV se procesa y cada transacción queda relacionada con el lote correspondiente.
+
+5. **Validación de las transacciones**
+
+   El microservicio de Validación revisa las transacciones antes de permitir que continúen.
+
+   Las principales validaciones son:
+
+   * Saldo disponible.
+   * Límites de transacción.
+   * Cuentas válidas.
+   * Controles para prevenir fraude.
+
+   Si una transacción presenta un problema, se guarda el resultado de la validación y el motivo del error.
+
+6. **Inicio del proceso de aprobación**
+
+   Si el lote pasa las validaciones necesarias, se envía al microservicio de Aprobaciones.
+
+7. **Aprobación Maker**
+
+   El usuario con rol `MAKER` realiza el primer paso del proceso. El sistema registra la acción realizada y el usuario que participó.
+
+8. **Aprobación Checker**
+
+   Después del primer paso, el lote pasa al usuario con rol `CHECKER`, quien realiza la segunda revisión y puede aprobar o rechazar el lote.
+
+9. **Aprobación Authorizer**
+
+   Si el Checker aprueba el lote, pasa al usuario con rol `AUTHORIZER`. Este realiza la aprobación final.
+
+   Al completar este paso, el lote se considera completamente aprobado.
+
+10. **Notificación a clientes o beneficiarios**
+
+    Cuando el lote completa los tres pasos de aprobación, el microservicio de Notificaciones envía un correo a los clientes o beneficiarios incluidos en el lote, indicando que su transacción se encuentra en proceso.
+
+11. **Envío al Core Bancario**
+
+    El microservicio de Integración con Core Bancario recibe el lote aprobado y envía las transacciones al sistema Core Bancario externo para que sean procesadas.
+
+12. **Respuesta del Core Bancario**
+
+    El sistema recibe el resultado enviado por el Core Bancario y registra si el procesamiento fue correcto o si ocurrió algún error.
+
+13. **Actualización del estado**
+
+    Según el resultado recibido, se actualiza el estado del lote y de las transacciones correspondientes.
+
+14. **Registro de auditoría**
+
+    Durante todo el proceso, el microservicio de Auditoría e Historial registra las acciones importantes realizadas dentro del sistema.
+
+    Entre los datos registrados se encuentran:
+
+    * Usuario que realizó la acción.
+    * Acción realizada.
+    * Fecha y hora.
+    * Cambios de estado.
+    * Aprobaciones y rechazos.
+    * Resultados de validaciones.
+    * Errores.
+    * Resultados recibidos del Core Bancario.
+
+15. **Consulta del historial**
+
+    Finalmente, el sistema permite consultar los lotes procesados, sus transacciones, estados y resultados. También permite recuperar y descargar el archivo relacionado con cada lote.
+
+## Flujo resumido
+
+```text
+Usuario
+   ↓
+Autenticación y Autorización
+   ↓
+Carga del archivo CSV
+   ↓
+Gestión de Lotes y Transacciones
+   ↓
+Almacenamiento del archivo
+   ↓
+Validación
+   ↓
+MAKER
+   ↓
+CHECKER
+   ↓
+AUTHORIZER
+   ↓
+Lote aprobado
+   ├───────────────→ Notificaciones
+   │
+   ↓
+Integración con Core Bancario
+   ↓
+Core Bancario Externo
+   ↓
+Resultado del procesamiento
+   ↓
+Actualización del lote y transacciones
+   ↓
+Historial
+
+Auditoría registra las acciones importantes durante todo el proceso.
+```
+
+
+ 
+
+# 10. Flujo de Aprobación Maker-Checker-Authorizer
+
+Explicar detalladamente:
+
+## Maker
+
+Responsabilidad y acciones.
+
+## Checker
+
+Responsabilidad y acciones.
+
+## Authorizer
+
+Responsabilidad y acciones.
+
+## Aprobación del lote
+
+Explicar qué pasa cuando los tres pasos se completan.
+
+## Rechazo del lote
+
+Explicar qué ocurre cuando una aprobación es rechazada.
+
+ 
+
+# 11. Reglas de Validación del Negocio
+
+Explicar cómo se validarán:
+
+* Saldo disponible.
+* Límites de transacción.
+* Cuentas válidas.
+* Prevención de fraude.
+
+ 
+
+# 12. Almacenamiento de Archivos CSV
+
+Explicar:
+
+* Cómo se recibe el archivo.
+* Dónde se almacena.
+* Cómo se identifica.
+* Cómo se relaciona con un lote.
+* Cómo se recupera.
+* Cómo puede descargarse posteriormente.
+
+Indicar la tecnología seleccionada:
+
+* AWS S3.
+* GCP Cloud Storage.
+* Azure Blob Storage.
+* FTP.
+
+ 
+
+# 13. Comunicación entre Microservicios
+
+Explicar qué servicios utilizarán:
+
+## Comunicación REST
+
+Indicar cuáles.
+
+## Mensajería Asíncrona
+
+Indicar cuáles.
+
+Tecnología seleccionada:
+
+* Kafka.
+* RabbitMQ.
+* NATS.
+* Otra.
+
+ 
+
+# 14. API Gateway
+
+Explicar:
+
+* Función del API Gateway.
+* Manejo de solicitudes.
+* Enrutamiento.
+* Autenticación.
+* Autorización.
+* Relación con los microservicios.
+
+ 
+
+# 15. Integración con el Core Bancario
+
+Explicar cómo el sistema enviará las transacciones aprobadas al sistema core bancario externo.
+
+Incluir:
+
+* Solicitud.
+* Información enviada.
+* Respuesta.
+* Manejo de errores.
+
+ 
+
+# 16. Sistema de Notificaciones
+
+Explicar cómo se enviarán correos a los clientes y beneficiarios después de la aprobación correspondiente.
+
+ 
+
+# 17. Logging y Auditoría
+
+Explicar qué información se registrará.
+
+Por ejemplo:
+
+* Usuario.
+* Acción.
+* Fecha.
+* Hora.
+* Microservicio.
+* Resultado.
+* Error.
+* Cambio de estado.
+* Aprobaciones.
+
+También indicar la tecnología de logging centralizado seleccionada.
+
+ 
+
+# 18. Historial de Lotes y Transacciones
+
+Explicar cómo los usuarios podrán:
+
+* Consultar lotes.
+* Consultar transacciones.
+* Ver estados.
+* Consultar resultados.
+* Descargar archivos anteriores.
+
+ 
+
+# 19. Bases de Datos
+
+Explicar que cada microservicio manejará su propia base de datos.
+
+Ejemplo:
+
+* Auth DB.
+* Transactions DB.
+* Validation DB.
+* Approvals DB.
+* Integration DB.
+* Notifications DB.
+* Audit DB.
+
+ 
+
+# 20. Diagramas ER
+
+## 20.1 ER - Autenticación y Autorización
+
+Diagrama.
+
+## 20.2 ER - Gestión de Lotes y Transacciones
+
+Diagrama.
+
+## 20.3 ER - Validación
+
+Diagrama.
+
+## 20.4 ER - Aprobaciones
+
+Diagrama.
+
+## 20.5 ER - Integración con Core Bancario
+
+Diagrama.
+
+## 20.6 ER - Notificaciones
+
+Diagrama.
+
+## 20.7 ER - Auditoría e Historial
+
+Diagrama.
+
+ 
+
+# 21. Diagramas de Clases UML
+
+## 21.1 Autenticación y Autorización
+
+Diagrama.
+
+## 21.2 Gestión de Lotes y Transacciones
+
+Diagrama.
+
+## 21.3 Validación
+
+Diagrama.
+
+## 21.4 Aprobaciones
+
+Diagrama.
+
+## 21.5 Integración con Core Bancario
+
+Diagrama.
+
+## 21.6 Notificaciones
+
+Diagrama.
+
+## 21.7 Auditoría e Historial
+
+Diagrama.
+
+ 
+
+# 22. Diagramas de Secuencia UML
+
+## 22.1 Carga y validación del archivo CSV
+
+Diagrama.
+
+## 22.2 Aprobación Maker-Checker-Authorizer
+
+Diagrama.
+
+## 22.3 Envío al Core Bancario
+
+Diagrama.
+
+## 22.4 Notificación a clientes
+
+Diagrama.
+
+ 
+
+# 23. Diagrama de Componentes UML
+
+Colocar el diagrama que muestre la relación entre:
+
+* Frontend.
+* API Gateway.
+* OAuth.
+* Microservicios.
+* Bases de datos.
+* Mensajería.
+* Almacenamiento.
+* Logging.
+* Core bancario.
+* Servicio de correo.
+
+ 
+
+# 24. Tecnologías Utilizadas
+
+Crear una tabla:
+
+| Tecnología | Uso                       |
+| ---------- | ------------------------- |
+| Go         | Backend                   |
+| Fiber      | API REST                  |
+| PostgreSQL | Bases de datos            |
+| JWT        | Autenticación             |
+| OAuth 2.0  | Autenticación corporativa |
+| ...        | ...                       |
+
+ 
+
+# 25. Patrones de Diseño y Arquitectura
+
+Explicar los patrones utilizados.
+
+Por ejemplo:
+
+* Microservices Architecture.
+* API Gateway.
+* Database per Service.
+* Event-Driven Architecture.
+* Repository.
+* Service Layer.
+
+Explicar brevemente por qué se utiliza cada uno.
+
+ 
+
