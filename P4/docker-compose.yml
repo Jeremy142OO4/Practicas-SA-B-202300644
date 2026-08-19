@@ -1,0 +1,247 @@
+services:
+
+  # ==========================================
+  # AUTH DATABASE
+  # ==========================================
+
+  auth-data:
+    image: postgres:17-alpine
+    container_name: auth-data
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth_db
+
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+      - ./auth-ms/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - tienda-network
+
+
+  # ==========================================
+  # AUTH MICROSERVICE
+  # ==========================================
+
+  auth-ms:
+    build:
+      context: ./auth-ms
+      dockerfile: Dockerfile
+
+    container_name: auth-ms
+
+    env_file:
+      - ./auth-ms/.env
+
+    ports:
+      - "4001:4001"
+
+    depends_on:
+      auth-data:
+        condition: service_healthy
+
+    networks:
+      - tienda-network
+
+
+  # ==========================================
+  # CATALOG DATABASE
+  # ==========================================
+
+  catalog-data:
+    image: postgres:17-alpine
+    container_name: catalog-data
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: catalog_db
+
+    volumes:
+      - catalog_data:/var/lib/postgresql/data
+      - ./catalog-ms/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d catalog_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - tienda-network
+
+
+  # ==========================================
+  # CATALOG MICROSERVICE
+  # ==========================================
+
+  catalog-ms:
+    build:
+      context: ./catalog-ms
+      dockerfile: Dockerfile
+
+    container_name: catalog-ms
+
+    env_file:
+      - ./catalog-ms/.env
+
+    ports:
+      - "4002:4002"
+
+    depends_on:
+      catalog-data:
+        condition: service_healthy
+
+    networks:
+      - tienda-network
+
+
+  # ==========================================
+  # PAYMENTS DATABASE
+  # ==========================================
+
+  payments-data:
+    image: postgres:17-alpine
+    container_name: payments-data
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payments_db
+
+    volumes:
+      - payments_data:/var/lib/postgresql/data
+      - ./payments-ms/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payments_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - tienda-network
+
+
+  # ==========================================
+  # PAYMENTS MICROSERVICE
+  # ==========================================
+
+  payments-ms:
+    build:
+      context: ./payments-ms
+      dockerfile: Dockerfile
+
+    container_name: payments-ms
+
+    env_file:
+      - ./payments-ms/.env
+
+    ports:
+      - "4004:4004"
+
+    depends_on:
+      payments-data:
+        condition: service_healthy
+
+    networks:
+      - tienda-network
+
+  # ==========================================
+  # ORDERS DATABASE
+  # ==========================================
+
+  orders-data:
+    image: postgres:17-alpine
+    container_name: orders-data
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: orders_db
+
+    volumes:
+      - orders_data:/var/lib/postgresql/data
+      - ./orders-ms/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orders_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - tienda-network
+
+
+  # ==========================================
+  # ORDERS MICROSERVICE
+  # ==========================================
+
+  orders-ms:
+    build:
+      context: ./orders-ms
+      dockerfile: Dockerfile
+
+    container_name: orders-ms
+
+    env_file:
+      - ./orders-ms/.env
+
+    ports:
+      - "4003:4003"
+
+    depends_on:
+      orders-data:
+        condition: service_healthy
+
+    networks:
+      - tienda-network
+
+  # ==========================================
+  # API GATEWAY
+  # ==========================================
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+
+    container_name: api-gateway
+
+    env_file:
+      - ./api-gateway/.env
+
+    ports:
+      - "4000:4000"
+
+    depends_on:
+      - auth-ms
+      - catalog-ms
+      - orders-ms
+      - payments-ms
+
+    networks:
+      - tienda-network
+
+
+volumes:
+
+  auth_data:
+  catalog_data:
+  orders_data:
+  payments_data:
+
+
+networks:
+
+  tienda-network:
+    driver: bridge

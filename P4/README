@@ -1,0 +1,808 @@
+# UNIVERSIDAD DE SAN CARLOS DE GUATEMALA
+
+## FACULTAD DE INGENIERÍA
+
+### SOFTWARE AVANZADO
+
+**CATEDRÁTICO:** Ing. Marco Tulio Aldana Prillwitz
+**TUTOR ACADÉMICO:** Kevin Pozuelos Estrada
+
+**Nombre:** Jeremy Estuardo Orellana Aldana
+**Carné:** 202300644
+**Sección:** B
+
+# Práctica 4 - Tienda de Videojuegos basada en Microservicios
+
+# Índice
+
+1. Descripción del problema
+2. Objetivos
+3. Alcance de la solución
+4. Arquitectura general
+5. Microservicios
+6. Arquitectura interna de los microservicios
+7. Comunicación entre microservicios
+8. API Gateway
+9. GraphQL
+10. Bases de datos
+11. Diagramas ER
+12. Diagrama de despliegue
+13. Docker y Docker Compose
+14. Tecnologías utilizadas
+15. Contratos de los microservicios
+16. Principios SOLID
+17. Estructura del proyecto
+18. Ejecución del sistema
+
+# 1. Descripción del problema
+
+Para esta práctica se desarrollará una tienda de videojuegos utilizando una arquitectura basada en microservicios.
+
+El sistema permitirá administrar usuarios, videojuegos, categorías, plataformas, precios, existencias, carritos de compra, órdenes y pagos.
+
+La aplicación será dividida en diferentes servicios independientes para evitar concentrar todas las responsabilidades dentro de una sola aplicación.
+
+La solución estará formada por cuatro microservicios principales:
+
+1. `Auth-ms`
+2. `Catalog-ms`
+3. `Orders-ms`
+4. `Payments-ms`
+
+Cada microservicio tendrá una responsabilidad específica y contará con su propia estructura interna.
+
+El acceso principal al sistema se realizará mediante un API Gateway, encargado de recibir las solicitudes provenientes de Postman o de cualquier consumidor de API y dirigirlas hacia el microservicio correspondiente.
+
+Todos los servicios serán ejecutados mediante contenedores Docker y serán administrados utilizando Docker Compose.
+
+# 2. Objetivos
+
+## Objetivo general
+
+Diseñar e implementar una tienda de videojuegos utilizando una arquitectura basada en microservicios, contenedores Docker y diferentes tecnologías de desarrollo.
+
+## Objetivos específicos
+
+* Implementar cuatro microservicios funcionales.
+* Reutilizar el servicio de autenticación desarrollado en la Práctica 2.
+* Separar las responsabilidades principales del sistema.
+* Implementar un API Gateway como punto principal de entrada.
+* Utilizar Go y Python para el desarrollo de los microservicios.
+* Implementar GraphQL en dos microservicios.
+* Utilizar bases de datos independientes por servicio.
+* Aplicar una arquitectura MVC + Service + Repository.
+* Contenerizar individualmente cada microservicio.
+* Levantar el sistema completo mediante Docker Compose.
+* Documentar y probar los servicios utilizando Postman.
+* Aplicar principios SOLID dentro de la implementación.
+
+# 3. Alcance de la solución
+
+La aplicación permitirá realizar las operaciones principales necesarias para una tienda de videojuegos.
+
+El sistema incluirá:
+
+* Registro de usuarios.
+* Inicio de sesión.
+* Autenticación mediante JWT.
+* Manejo de roles.
+* Administración del catálogo de videojuegos.
+* Administración de categorías.
+* Administración de plataformas.
+* Manejo de precios.
+* Control de stock.
+* Creación y administración del carrito de compras.
+* Generación de órdenes.
+* Consulta de órdenes.
+* Registro y simulación de pagos.
+* API Gateway.
+* APIs REST.
+* APIs GraphQL.
+* Bases de datos PostgreSQL.
+* Docker.
+* Docker Compose.
+* Contratos y pruebas mediante Postman.
+
+No se utilizará una pasarela de pagos externa. El procesamiento de los pagos será simulado dentro de `Payments-ms`.
+
+# 4. Arquitectura General
+
+La solución utiliza una arquitectura basada en microservicios.
+
+El cliente accede al sistema por medio de un consumidor de API, el cual realiza las solicitudes hacia el API Gateway. El API Gateway funciona como el punto principal de entrada al sistema y se encarga de dirigir cada solicitud hacia el microservicio correspondiente.
+
+Los cuatro microservicios son:
+
+* `Auth-ms`
+* `Catalog-ms`
+* `Orders-ms`
+* `Payments-ms`
+
+`Auth-ms` se encarga de la autenticación y autorización de los usuarios.
+
+`Catalog-ms` administra los videojuegos disponibles en la tienda, sus categorías, plataformas, precios y existencias.
+
+`Orders-ms` administra el carrito de compras y las órdenes realizadas por los usuarios.
+
+`Payments-ms` registra y simula el procesamiento de los pagos asociados a las órdenes.
+
+La comunicación entre los componentes del sistema será síncrona, por lo que cada solicitud espera una respuesta antes de continuar con el proceso.
+
+Además de las solicitudes recibidas mediante el API Gateway, `Orders-ms` mantiene comunicación interna con `Catalog-ms` para consultar productos, precios y stock, y con `Payments-ms` para procesar los pagos.
+
+
+## Diagrama de Arquitectura General
+
+![Diagrama de Arquitectura](./Imagenes/DiagramaArquitectura.png)
+
+# 5. Microservicios
+
+## 5.1 Auth-ms
+
+### Responsabilidad
+
+`Auth-ms` se encarga de la autenticación y autorización de los usuarios.
+
+Este servicio reutiliza la autenticación desarrollada durante la Práctica 2.
+
+Su función principal es permitir que los usuarios puedan registrarse, iniciar sesión y acceder únicamente a las operaciones permitidas según su rol.
+
+### Entradas
+
+* Nombre del usuario.
+* Correo electrónico.
+* Contraseña.
+* Token JWT.
+* Información del rol.
+
+### Salidas
+
+* Usuario registrado.
+* Sesión iniciada.
+* Token JWT.
+* Información del usuario.
+* Información del rol.
+* Mensajes de autenticación o autorización.
+
+### Funcionalidades
+
+* Registrar usuarios.
+* Iniciar sesión.
+* Cerrar sesión.
+* Generar JWT.
+* Validar JWT.
+* Renovar sesiones.
+* Consultar información del usuario.
+* Verificar roles.
+* Autorizar solicitudes.
+
+### Base de datos
+
+Las tablas principales son:
+
+* `usuarios`
+* `roles`
+
+### Tecnología
+
+* Go
+* Fiber
+* API REST
+* PostgreSQL
+* Docker
+
+# 5.2 Catalog-ms
+
+### Responsabilidad
+
+`Catalog-ms` se encarga de administrar el catálogo de videojuegos disponible dentro de la tienda.
+
+También controla las categorías, plataformas, precios y existencias de cada videojuego.
+
+### Entradas
+
+* Información del videojuego.
+* Categoría.
+* Plataforma.
+* Precio.
+* Cantidad disponible.
+* Consultas realizadas por los usuarios.
+* Solicitudes recibidas desde `Orders-ms`.
+
+### Salidas
+
+* Listado de videojuegos.
+* Información de un videojuego.
+* Precio.
+* Plataforma.
+* Categoría.
+* Stock disponible.
+* Resultado de operaciones realizadas sobre el catálogo.
+
+### Funcionalidades
+
+* Registrar videojuegos.
+* Consultar videojuegos.
+* Actualizar videojuegos.
+* Administrar categorías.
+* Administrar plataformas.
+* Consultar precio.
+* Consultar stock.
+* Actualizar stock.
+* Relacionar videojuegos con plataformas.
+
+### Base de datos
+
+Las tablas principales son:
+
+* `categorias`
+* `videojuegos`
+* `plataformas`
+* `videojuego_plataforma`
+
+### Tecnología
+
+* Go
+* Fiber
+* GraphQL
+* PostgreSQL
+* Docker
+
+# 5.3 Orders-ms
+
+### Responsabilidad
+
+`Orders-ms` se encarga de administrar los carritos de compra y las órdenes realizadas por los usuarios.
+
+Cuando un usuario desea comprar un videojuego, este servicio consulta a `Catalog-ms` para verificar la información del producto y la existencia disponible.
+
+Posteriormente puede solicitar a `Payments-ms` el procesamiento del pago.
+
+### Entradas
+
+* Identificador del usuario.
+* Identificador del videojuego.
+* Plataforma seleccionada.
+* Cantidad.
+* Información del carrito.
+* Solicitud de creación de una orden.
+
+### Salidas
+
+* Carrito actualizado.
+* Detalle del carrito.
+* Orden creada.
+* Detalle de la orden.
+* Total de la compra.
+* Estado de la orden.
+* Historial de órdenes del usuario.
+
+### Funcionalidades
+
+* Crear carrito.
+* Consultar carrito.
+* Agregar productos.
+* Eliminar productos.
+* Actualizar cantidades.
+* Calcular totales.
+* Crear órdenes.
+* Crear detalles de orden.
+* Consultar órdenes.
+* Consultar historial de órdenes.
+* Comunicarse con `Catalog-ms`.
+* Comunicarse con `Payments-ms`.
+
+### Base de datos
+
+Las tablas principales son:
+
+* `carritos`
+* `detalle_carrito`
+* `ordenes`
+* `detalle_orden`
+
+### Tecnología
+
+* Python
+* FastAPI
+* GraphQL
+* PostgreSQL
+* Docker
+
+# 5.4 Payments-ms
+
+### Responsabilidad
+
+`Payments-ms` se encarga de registrar y simular el procesamiento de los pagos correspondientes a las órdenes.
+
+No se utilizará un servicio externo de pagos, por lo que el resultado será administrado dentro del propio microservicio.
+
+### Entradas
+
+* Identificador de la orden.
+* Monto.
+* Método de pago.
+* Solicitud de procesamiento.
+
+### Salidas
+
+* Pago registrado.
+* Estado del pago.
+* Código de transacción.
+* Resultado del procesamiento.
+* Información de errores.
+
+### Funcionalidades
+
+* Registrar métodos de pago.
+* Registrar pagos.
+* Procesar un pago simulado.
+* Aprobar o rechazar un pago.
+* Registrar intentos de transacción.
+* Consultar pagos.
+* Consultar estado de un pago.
+
+### Base de datos
+
+Las tablas principales son:
+
+* `metodos_pago`
+* `pagos`
+* `transacciones_pago`
+
+### Tecnología
+
+* Python
+* FastAPI
+* API REST
+* PostgreSQL
+* Docker
+
+# 6. Arquitectura interna de los microservicios
+
+Cada microservicio utilizará una organización basada en:
+
+**MVC + Service + Repository**
+
+La separación será utilizada para evitar concentrar todas las responsabilidades dentro de una misma capa.
+
+## Controller
+
+Los controladores reciben las solicitudes dirigidas hacia el servicio.
+
+Se encargan de obtener los datos recibidos y enviarlos hacia la capa de servicios.
+
+No contienen directamente las reglas principales del negocio.
+
+## Service
+
+La capa Service contiene las principales reglas y procesos del negocio.
+
+Esta capa coordina las operaciones necesarias antes de consultar o modificar la información almacenada.
+
+También puede realizar comunicación con otros microservicios cuando sea necesario.
+
+## Repository
+
+La capa Repository se encarga de las operaciones relacionadas con la persistencia de los datos.
+
+Permite mantener el acceso a PostgreSQL separado de las reglas principales del negocio.
+
+## Model
+
+Los modelos representan las principales entidades manejadas dentro de cada microservicio.
+
+# 7. Comunicación entre microservicios
+
+La comunicación utilizada en la solución será principalmente síncrona.
+
+Esto significa que cuando un servicio realiza una solicitud, espera la respuesta antes de continuar con el proceso.
+
+El API Gateway puede dirigir solicitudes hacia:
+
+* `Auth-ms`
+* `Catalog-ms`
+* `Orders-ms`
+* `Payments-ms`
+
+También existe comunicación interna entre algunos servicios.
+
+## Orders-ms y Catalog-ms
+
+`Orders-ms` se comunica con `Catalog-ms` para obtener información necesaria antes de realizar una compra.
+
+Entre la información consultada se encuentra:
+
+* Existencia del videojuego.
+* Plataforma.
+* Precio.
+* Stock disponible.
+
+También puede solicitar la actualización del stock después de completar una operación.
+
+## Orders-ms y Payments-ms
+
+`Orders-ms` se comunica con `Payments-ms` cuando una orden necesita ser pagada.
+
+`Payments-ms` procesa de forma simulada la solicitud y devuelve el resultado correspondiente.
+
+# 8. API Gateway
+
+El API Gateway representa el punto principal de entrada hacia los microservicios.
+
+El consumidor de API no necesita conocer directamente la ubicación de cada servicio.
+
+Sus principales responsabilidades son:
+
+* Recibir solicitudes desde Postman o desde otro consumidor de API.
+* Identificar el servicio correspondiente.
+* Enrutar solicitudes.
+* Centralizar el acceso hacia el backend.
+* Facilitar el acceso hacia los diferentes microservicios.
+
+El API Gateway será desarrollado utilizando Go y Fiber.
+
+# 9. GraphQL
+
+GraphQL será implementado en dos microservicios:
+
+* `Catalog-ms`
+* `Orders-ms`
+
+## Catalog-ms
+
+GraphQL permitirá consultar únicamente la información requerida del catálogo.
+
+Por ejemplo, una consulta puede solicitar únicamente:
+
+* Nombre.
+* Precio.
+* Plataforma.
+* Stock.
+
+También podrán utilizarse mutations para realizar operaciones sobre los datos del catálogo.
+
+## Orders-ms
+
+GraphQL será utilizado para consultar y administrar información relacionada con:
+
+* Carritos.
+* Detalles del carrito.
+* Órdenes.
+* Detalles de órdenes.
+* Historial de compras.
+
+Se utilizarán Queries para consultar información y Mutations para las operaciones que modifican los datos.
+
+# 10. Bases de datos
+
+Cada microservicio manejará su propia base de datos PostgreSQL.
+
+Esta decisión permite mantener los datos separados según la responsabilidad de cada servicio.
+
+Un microservicio no realizará consultas directamente sobre la base de datos perteneciente a otro microservicio.
+
+Cuando un servicio necesita información perteneciente a otro servicio, deberá obtenerla mediante comunicación entre microservicios.
+
+## Auth Data
+
+Pertenece a `Auth-ms`.
+
+Tablas:
+
+* `usuarios`
+* `roles`
+
+## Catalog Data
+
+Pertenece a `Catalog-ms`.
+
+Tablas:
+
+* `categorias`
+* `videojuegos`
+* `plataformas`
+* `videojuego_plataforma`
+
+## Orders Data
+
+Pertenece a `Orders-ms`.
+
+Tablas:
+
+* `carritos`
+* `detalle_carrito`
+* `ordenes`
+* `detalle_orden`
+
+## Payments Data
+
+Pertenece a `Payments-ms`.
+
+Tablas:
+
+* `metodos_pago`
+* `pagos`
+* `transacciones_pago`
+
+Los identificadores pertenecientes a otros microservicios podrán almacenarse como referencias lógicas, pero no se utilizarán llaves foráneas entre bases de datos diferentes.
+
+# 11. Diagramas ER
+
+## 11.1 Autenticación y Autorización
+
+![ER Auth](./Imagenes/ER_Auth.png)
+
+## 11.2 Catálogo
+
+![ER Catalog](./Imagenes/ER_Catalog.png)
+
+## 11.3 Carrito y Órdenes
+
+![ER Orders](./Imagenes/ER_Orders.png)
+
+## 11.4 Pagos
+
+![ER Payments](./Imagenes/ER_Payments.png)
+
+# 12. Diagrama de despliegue
+
+El sistema será ejecutado utilizando Docker y Docker Compose.
+
+Para las pruebas y el consumo de las APIs se utilizará Postman como cliente externo. Postman enviará las solicitudes al API Gateway mediante el puerto `4000`, siendo este el único punto de entrada hacia los microservicios desde el cliente.
+
+El API Gateway, los cuatro microservicios y sus respectivas bases de datos serán ejecutados dentro del entorno administrado mediante Docker y Docker Compose.
+
+Cada microservicio contará con su propio contenedor y tendrá una base de datos PostgreSQL independiente.
+
+La comunicación entre cada microservicio y su base de datos se realizará mediante TCP utilizando el puerto interno `5432`.
+
+`Orders-ms` también tendrá comunicación interna directa con `Catalog-ms` para consultar información de productos y stock, y con `Payments-ms` para realizar el procesamiento de los pagos.
+
+
+## Diagrama
+
+![Diagrama de Despliegue](./Imagenes/DiagramaDespliegue.png)
+
+# 13. Docker y Docker Compose
+
+## Docker
+
+Cada microservicio contará con un `Dockerfile` individual.
+
+Esto permitirá construir una imagen independiente para cada uno de los servicios.
+
+Los servicios que serán contenerizados son:
+
+* API Gateway.
+* `Auth-ms`.
+* `Catalog-ms`.
+* `Orders-ms`.
+* `Payments-ms`.
+
+## Docker Compose
+
+Docker Compose será utilizado para administrar el conjunto completo de servicios.
+
+El archivo `docker-compose.yml` permitirá levantar la aplicación mediante un solo comando.
+
+También permitirá crear una red interna para facilitar la comunicación entre los contenedores.
+
+Los componentes principales definidos dentro de Docker Compose serán:
+
+* API Gateway.
+* Auth-ms.
+* Catalog-ms.
+* Orders-ms.
+* Payments-ms.
+* Auth Data.
+* Catalog Data.
+* Orders Data.
+* Payments Data.
+
+# 14. Tecnologías utilizadas
+
+| Tecnología     | Uso                                             |
+| -------------- | ----------------------------------------------- |
+| Go             | Desarrollo de Auth-ms, Catalog-ms y API Gateway |
+| Fiber          | Creación de APIs con Go                         |
+| Python         | Desarrollo de Orders-ms y Payments-ms           |
+| FastAPI        | Creación de APIs con Python                     |
+| GraphQL        | API de Catalog-ms y Orders-ms                   |
+| REST           | API de Auth-ms y Payments-ms                    |
+| PostgreSQL     | Bases de datos                                  |
+| JWT            | Autenticación y manejo de sesiones              |
+| Docker         | Contenedores                                    |
+| Docker Compose | Administración y ejecución del sistema          |
+| Postman        | Documentación y pruebas de las APIs             |
+
+# 15. Contratos de los microservicios
+
+Los contratos de los servicios serán documentados mediante Postman.
+
+La documentación permitirá identificar:
+
+* Ruta o endpoint.
+* Método utilizado.
+* Parámetros.
+* Headers.
+* Body.
+* Respuesta esperada.
+* Códigos de respuesta.
+* Ejemplos de solicitudes.
+* Ejemplos de respuestas.
+
+Para los servicios que utilizan GraphQL también se documentarán:
+
+* Queries.
+* Mutations.
+* Variables.
+* Tipos de respuesta.
+
+## Auth-ms
+
+| Método | Ruta externa | Descripción |
+| --- | --- | --- |
+| POST | `/auth/register` | Registra un usuario. |
+| POST | `/auth/login` | Autentica y devuelve un token JWT. |
+| GET | `/auth/validate` | Valida `Authorization: Bearer <token>`. |
+
+## Catalog-ms
+
+`POST /catalog/graphql`. Queries: `videojuegos`, `videojuego(id)`, `categorias`, `plataformas`, `stock(id)` y `videojuegoPlataforma(id)`. Mutations: `crearCategoria`, `crearPlataforma`, `crearVideojuego`, `asignarPlataforma` y `actualizarStock`.
+
+## Orders-ms
+
+`POST /orders/graphql`. Queries: `carrito(idUsuario)`, `orden(idOrden)` y `ordenes(idUsuario)`. Mutations: `agregarProducto`, `eliminarProducto`, `crearOrden` y `pagarOrden`.
+
+## Payments-ms
+
+| Método | Ruta externa | Descripción |
+| --- | --- | --- |
+| GET | `/payments/metodos` | Lista métodos de pago activos. |
+| POST | `/payments/procesar` | Procesa un pago simulado. |
+| GET | `/payments/{idPago}` | Consulta un pago. |
+| GET | `/payments/orden/{idOrden}` | Lista los pagos de una orden. |
+
+Todas las rutas externas usan `http://localhost:4000` como base. La colección importable se encuentra en `Postman/P4-Tienda-de-Videojuegos.postman_collection.json` e incluye ejemplos, variables y pruebas automáticas para el flujo completo.
+
+# 16. Principios SOLID
+
+**S - Principio de responsabilidad única**
+
+Este principio lo apliqué separando las tareas dentro de cada microservicio. Los controllers reciben las peticiones, los services realizan las reglas del negocio y los repositories se encargan de PostgreSQL. También separé los modelos, las rutas, la configuración y los clientes HTTP para que cada parte tenga una sola responsabilidad.
+
+Archivo y clases utilizadas: `payments-ms/controllers/payment_controller.py` (`PagoController`) y `payments-ms/services/payment_service.py` (`PagoService`).
+
+Ejemplo de la separación utilizada en Payments-ms:
+
+```python
+class PagoController:
+    def __init__(self, servicio):
+        self.servicio = servicio
+
+class PagoService:
+    def __init__(self, repositorio):
+        self.repositorio = repositorio
+```
+
+**O - Principio abierto/cerrado**
+
+Este principio lo apliqué porque puedo agregar otra forma de guardar o buscar usuarios sin cambiar las reglas que ya existen en AuthService. Solamente tendría que crear otra implementación que cumpla la interfaz RepositorioUsuario.
+
+Archivo y clase utilizada: `auth-ms/services/auth_service.go` (`AuthService`).
+
+Ejemplo:
+
+```go
+func NuevoAuthService(
+    repositorio repositories.RepositorioUsuario,
+    gestorJWT *config.GestorJWT,
+    claveCifrado string,
+) *AuthService {
+    return &AuthService{
+        Repositorio: repositorio,
+        GestorJWT: gestorJWT,
+        ClaveCifrado: claveCifrado,
+    }
+}
+```
+
+**L - Principio de sustitución de Liskov**
+
+Este principio lo apliqué porque UsuarioRepository puede cambiarse por otra implementación del repositorio. Mientras la nueva implementación respete RepositorioUsuario y mantenga el comportamiento de crear y buscar usuarios, AuthService podrá utilizarla sin cambiar su funcionamiento.
+
+Archivo e interfaz utilizada: `auth-ms/repositories/user_repository.go` (`RepositorioUsuario`).
+
+Ejemplo:
+
+```go
+type RepositorioUsuario interface {
+    CrearUsuario(usuario *models.Usuario) error
+    BuscarPorHashCorreo(hashCorreo string) (*models.Usuario, error)
+}
+```
+
+**I - Principio de segregación de interfaces**
+
+Este principio lo apliqué creando una interfaz específica para las operaciones de usuarios que necesita AuthService. El servicio depende únicamente de crear un usuario y buscarlo por el hash del correo; no está obligado a conocer operaciones de catálogo, órdenes, pagos ni detalles de PostgreSQL.
+
+Archivo e interfaz utilizada: `auth-ms/repositories/user_repository.go` (`RepositorioUsuario`).
+
+Ejemplo:
+
+```go
+type RepositorioUsuario interface {
+    CrearUsuario(usuario *models.Usuario) error
+    BuscarPorHashCorreo(hashCorreo string) (*models.Usuario, error)
+}
+```
+
+**D - Principio de inversión de dependencias**
+
+Este principio lo apliqué porque AuthService no trabaja directamente con PostgreSQL. El servicio depende de la interfaz RepositorioUsuario y en main.go se conectan la implementación real del repositorio, el gestor JWT y la clave de cifrado. En Orders-ms también se inyectan el repositorio y los clientes de Catalog y Payments desde main.py.
+
+Archivos y clases utilizadas: `auth-ms/main.go`, `auth-ms/services/auth_service.go` (`AuthService`) y `auth-ms/repositories/user_repository.go` (`RepositorioUsuario`).
+
+Ejemplo de la conexión de dependencias en Auth-ms:
+
+```go
+repositorio := repositories.NuevoUsuarioRepository(bd)
+gestorJWT := config.NuevoGestorJWT(claveJWT)
+
+servicio := services.NuevoAuthService(
+    repositorio,
+    gestorJWT,
+    os.Getenv("ENCRYPTION_KEY"),
+)
+```
+
+# 17. Estructura del proyecto
+
+La carpeta `P4` contendrá el código y la documentación correspondiente a la práctica.
+
+La estructura general propuesta será:
+
+```text
+P4/
+│
+├── api-gateway/
+│
+├── auth-ms/
+│
+├── catalog-ms/
+│
+├── orders-ms/
+│
+├── payments-ms/
+│
+├── Imagenes/
+│
+├── Postman/
+│
+├── docker-compose.yml
+│
+└── README
+```
+
+La estructura podrá ajustarse durante la implementación siempre que se mantenga la separación de los microservicios.
+
+# 18. Ejecución del sistema
+
+El sistema completo será levantado utilizando Docker Compose.
+
+Una vez completada la implementación, el comando principal será:
+
+```bash
+docker compose up --build
+```
+
+Este comando construirá las imágenes necesarias y levantará los contenedores definidos dentro del archivo `docker-compose.yml`.
+
+Para detener los servicios se utilizará:
+
+```bash
+docker compose down
+```
+
+El punto de entrada externo es `http://localhost:4000`. Los puertos `4001`, `4002`, `4003` y `4004` corresponden a los microservicios y se utilizan para comunicación y diagnóstico; los clientes consumen el API Gateway en el puerto `4000`.

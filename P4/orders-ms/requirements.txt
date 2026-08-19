@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+asyncpg
+httpx
+strawberry-graphql[fastapi]
