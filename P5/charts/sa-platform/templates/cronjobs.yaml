@@ -1,0 +1,54 @@
+{{- $jobs := index .Values "scheduled-jobs" }}
+{{- $image := printf "%s:%s" (required "scheduled-jobs.image.repository es obligatorio" $jobs.image.repository) (default .Chart.AppVersion $jobs.image.tag) }}
+{{- range $job := list
+    (dict "name" "execution-recorder" "schedule" $jobs.cronjob1.schedule "script" "/app/cronjob_1.py")
+    (dict "name" "summary-publisher" "schedule" $jobs.cronjob2.schedule "script" "/app/cronjob_2.py")
+}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $job.name | quote }}
+  namespace: {{ $.Values.namespace | quote }}
+  labels:
+    app.kubernetes.io/name: {{ $job.name | quote }}
+    {{- include "sa-platform.labels" $ | nindent 4 }}
+spec:
+  schedule: {{ $job.schedule | quote }}
+  timeZone: America/Guatemala
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ $jobs.job.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ $jobs.job.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ $jobs.job.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ $job.name | quote }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ $job.name | quote }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: {{ $job.name | quote }}
+              image: {{ $image | quote }}
+              imagePullPolicy: {{ default "IfNotPresent" $jobs.imagePullPolicy | quote }}
+              command:
+                - python
+                - {{ $job.script | quote }}
+              securityContext:
+                {{- toYaml $.Values.global.securityContext | nindent 16 }}
+              envFrom:
+                - configMapRef:
+                    name: scheduled-jobs
+                - secretRef:
+                    name: {{ $jobs.secretName | quote }}
+              resources:
+                {{- toYaml $jobs.resources | nindent 16 }}
+{{- end }}

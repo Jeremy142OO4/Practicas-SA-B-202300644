@@ -1,0 +1,51 @@
+{{- $jobs := index .Values "scheduled-jobs" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: summary-consumer
+  namespace: {{ .Values.namespace | quote }}
+  labels:
+    app.kubernetes.io/name: summary-consumer
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: summary-consumer
+      app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: summary-consumer
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+      annotations:
+        checksum/config: {{ toJson $jobs.config | sha256sum | quote }}
+    spec:
+      serviceAccountName: summary-consumer
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: summary-consumer
+          image: {{ printf "%s:%s" (required "scheduled-jobs.image.repository es obligatorio" $jobs.image.repository) (default .Chart.AppVersion $jobs.image.tag) | quote }}
+          imagePullPolicy: {{ default "IfNotPresent" $jobs.imagePullPolicy | quote }}
+          command:
+            - python
+            - /app/summary_consumer.py
+          securityContext:
+            {{- toYaml .Values.global.securityContext | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: scheduled-jobs
+            - secretRef:
+                name: {{ $jobs.secretName | quote }}
+          resources:
+            {{- toYaml $jobs.resources | nindent 12 }}

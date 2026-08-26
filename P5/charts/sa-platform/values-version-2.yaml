@@ -1,0 +1,10 @@
+# Version demostrativa 2 de la aplicacion.
+api-gateway:
+  image:
+    tag: "1.1.0-dev"
+orders-ms:
+  image:
+    tag: "1.1.0-dev"
+payments-ms:
+  image:
+    tag: "1.1.0-dev"

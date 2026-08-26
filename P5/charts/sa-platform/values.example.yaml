@@ -1,0 +1,34 @@
+secrets:
+  auth-ms-secret:
+    DB_PASSWORD: example-password
+    JWT_SECRET: example-jwt-secret
+    ENCRYPTION_KEY: example-encryption-key
+  catalog-ms-secret:
+    DB_PASSWORD: example-password
+  orders-ms-secret:
+    DB_PASSWORD: example-password
+    RABBITMQ_URL: amqp://example:example@sa-platform-rabbitmq:5672/
+  payments-ms-secret:
+    DB_PASSWORD: example-password
+    RABBITMQ_URL: amqp://example:example@sa-platform-rabbitmq:5672/
+  scheduled-jobs-secret:
+    DB_PASSWORD: example-password
+    RABBITMQ_URL: amqp://example:example@sa-platform-rabbitmq:5672/
+
+rabbitmq:
+  auth:
+    username: example
+    password: example
+
+auth-database:
+  auth:
+    password: example-password
+catalog-database:
+  auth:
+    password: example-password
+orders-database:
+  auth:
+    password: example-password
+payments-database:
+  auth:
+    password: example-password

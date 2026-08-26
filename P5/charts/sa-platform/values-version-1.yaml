@@ -1,0 +1,4 @@
+# Version demostrativa 1 de la aplicacion.
+api-gateway:
+  image:
+    tag: "1.0.0-dev"

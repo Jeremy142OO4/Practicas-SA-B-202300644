@@ -1,0 +1,60 @@
+logLevel: debug
+
+api-gateway:
+  replicaCount: 2
+  image:
+    tag: "1.0.0-dev"
+  logLevel: debug
+  config:
+    LOG_LEVEL: debug
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 300m, memory: 256Mi}
+
+auth-ms:
+  replicaCount: 2
+  image:
+    tag: "1.0.0-dev"
+  logLevel: debug
+  config:
+    LOG_LEVEL: debug
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 300m, memory: 256Mi}
+
+catalog-ms:
+  replicaCount: 2
+  image:
+    tag: "1.0.0-dev"
+  logLevel: debug
+  config:
+    LOG_LEVEL: debug
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 300m, memory: 256Mi}
+
+orders-ms:
+  replicaCount: 2
+  image:
+    tag: "1.0.0-dev"
+  logLevel: debug
+  config:
+    LOG_LEVEL: debug
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 300m, memory: 256Mi}
+
+payments-ms:
+  replicaCount: 2
+  image:
+    tag: "1.0.0-dev"
+  logLevel: debug
+  config:
+    LOG_LEVEL: debug
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 300m, memory: 256Mi}
+
+scheduled-jobs:
+  image:
+    tag: "1.0.1-dev"

@@ -1,0 +1,60 @@
+logLevel: warn
+
+api-gateway:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  logLevel: warn
+  config:
+    LOG_LEVEL: warn
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+auth-ms:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  logLevel: warn
+  config:
+    LOG_LEVEL: warn
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+catalog-ms:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  logLevel: warn
+  config:
+    LOG_LEVEL: warn
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+orders-ms:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  logLevel: warn
+  config:
+    LOG_LEVEL: warn
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+payments-ms:
+  replicaCount: 3
+  image:
+    tag: "1.0.0"
+  logLevel: warn
+  config:
+    LOG_LEVEL: warn
+  resources:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+
+scheduled-jobs:
+  image:
+    tag: "1.0.0"

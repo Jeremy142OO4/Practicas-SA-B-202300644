@@ -1,0 +1,33 @@
+dependencies:
+- name: api-gateway
+  repository: file://charts/api-gateway
+  version: 0.1.0
+- name: auth-ms
+  repository: file://charts/auth-ms
+  version: 0.1.0
+- name: catalog-ms
+  repository: file://charts/catalog-ms
+  version: 0.1.0
+- name: orders-ms
+  repository: file://charts/orders-ms
+  version: 0.1.0
+- name: payments-ms
+  repository: file://charts/payments-ms
+  version: 0.1.0
+- name: rabbitmq
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 16.0.14
+- name: postgresql
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 18.8.13
+- name: postgresql
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 18.8.13
+- name: postgresql
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 18.8.13
+- name: postgresql
+  repository: oci://registry-1.docker.io/bitnamicharts
+  version: 18.8.13
+digest: sha256:d56440daac5d89f79f5b03bcb72f3c053bdc885d800fc71c91ecfbd77ae3441c
+generated: "2026-08-26T10:40:48.360076941-06:00"

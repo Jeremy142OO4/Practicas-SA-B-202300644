@@ -1,0 +1,14 @@
+{{- if .Values.resourceQuota.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sa-p5-quota
+  namespace: {{ .Values.namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  hard:
+    {{- range $resource, $value := .Values.resourceQuota.hard }}
+    {{ $resource }}: {{ $value | quote }}
+    {{- end }}
+{{- end }}
