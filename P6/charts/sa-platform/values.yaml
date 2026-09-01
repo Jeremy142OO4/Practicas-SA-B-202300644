@@ -1,0 +1,260 @@
+namespace: sa-p6
+nameOverride: ""
+fullnameOverride: ""
+logLevel: info
+
+components:
+  - api-gateway
+  - auth-ms
+  - catalog-ms
+  - orders-ms
+  - payments-ms
+  - scheduled-jobs
+
+global:
+  namespace: sa-p6
+  imagePullPolicy: IfNotPresent
+  networkPolicies:
+    enabled: true
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+resourceQuota:
+  enabled: true
+  hard:
+    pods: "60"
+    requests.cpu: "4"
+    requests.memory: 6Gi
+    limits.cpu: "12"
+    limits.memory: 16Gi
+    requests.storage: 60Gi
+    persistentvolumeclaims: "10"
+
+limitRange:
+  enabled: true
+  container:
+    defaultRequest:
+      cpu: 50m
+      memory: 64Mi
+    default:
+      cpu: 500m
+      memory: 512Mi
+    min:
+      cpu: 10m
+      memory: 32Mi
+    max:
+      cpu: "2"
+      memory: 2Gi
+
+secrets:
+  auth-ms-secret:
+    DB_PASSWORD: ""
+    JWT_SECRET: ""
+    ENCRYPTION_KEY: ""
+  catalog-ms-secret:
+    DB_PASSWORD: ""
+  orders-ms-secret:
+    DB_PASSWORD: ""
+    RABBITMQ_URL: ""
+  payments-ms-secret:
+    DB_PASSWORD: ""
+    RABBITMQ_URL: ""
+  scheduled-jobs-secret:
+    DB_PASSWORD: ""
+    RABBITMQ_URL: ""
+
+api-gateway:
+  image:
+    repository: jeremy142004/sa-p6
+    tag: "api-gateway-1.0.0"
+  replicaCount: 2
+  service:
+    type: LoadBalancer
+    port: 4000
+  logLevel: info
+  secretName: ""
+  config:
+    PORT: "4000"
+    AUTH_URL: http://auth-ms:4001
+    CATALOG_URL: http://catalog-ms:4002
+    ORDERS_URL: http://orders-ms:4003
+    PAYMENTS_URL: http://payments-ms:4004
+    LOG_LEVEL: info
+
+auth-ms:
+  image:
+    repository: jeremy142004/sa-p6
+    tag: "auth-ms-1.0.0"
+  replicaCount: 2
+  service:
+    port: 4001
+  logLevel: info
+  secretName: auth-ms-secret
+  config:
+    PORT: "4001"
+    DB_HOST: sa-platform-auth-database
+    DB_PORT: "5432"
+    DB_USER: postgres
+    DB_NAME: auth_db
+    LOG_LEVEL: info
+
+catalog-ms:
+  image:
+    repository: jeremy142004/sa-p6
+    tag: "catalog-ms-1.0.0"
+  replicaCount: 2
+  service:
+    port: 4002
+  logLevel: info
+  secretName: catalog-ms-secret
+  config:
+    PORT: "4002"
+    DB_HOST: sa-platform-catalog-database
+    DB_PORT: "5432"
+    DB_USER: postgres
+    DB_NAME: catalog_db
+    LOG_LEVEL: info
+
+orders-ms:
+  image:
+    repository: jeremy142004/sa-p6
+    tag: "orders-ms-1.0.0"
+  replicaCount: 2
+  service:
+    port: 4003
+  logLevel: info
+  secretName: orders-ms-secret
+  config:
+    PORT: "4003"
+    DB_HOST: sa-platform-orders-database
+    DB_PORT: "5432"
+    DB_USER: postgres
+    DB_NAME: orders_db
+    CATALOG_URL: http://catalog-ms:4002/graphql
+    PAYMENT_QUEUE: payment.requests
+    LOG_LEVEL: info
+
+payments-ms:
+  image:
+    repository: jeremy142004/sa-p6
+    tag: "payments-ms-1.0.0"
+  replicaCount: 2
+  hpa:
+    enabled: true
+  service:
+    port: 4004
+  logLevel: info
+  secretName: payments-ms-secret
+  config:
+    PORT: "4004"
+    DB_HOST: sa-platform-payments-database
+    DB_PORT: "5432"
+    DB_USER: postgres
+    DB_NAME: payments_db
+    PAYMENT_QUEUE: payment.requests
+    ORDERS_URL: http://orders-ms:4003
+    LOG_LEVEL: info
+
+scheduled-jobs:
+  image:
+    repository: jeremy142004/sa-p6
+    tag: "scheduled-jobs-1.0.0"
+  imagePullPolicy: IfNotPresent
+  secretName: scheduled-jobs-secret
+  config:
+    DB_HOST: sa-platform-orders-database
+    DB_PORT: "5432"
+    DB_USER: postgres
+    DB_NAME: orders_db
+    STUDENT_ID: "202300644"
+    SUMMARY_QUEUE: scheduled.summary
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  cronjob1:
+    schedule: "*/2 * * * *"
+  cronjob2:
+    schedule: "*/10 * * * *"
+  job:
+    backoffLimit: 3
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 3
+
+rabbitmq:
+  enabled: true
+  namespaceOverride: sa-p6
+  global:
+    security:
+      allowInsecureImages: true
+  image:
+    repository: bitnamilegacy/rabbitmq
+  auth:
+    username: user
+    password: ""
+  persistence:
+    enabled: true
+    storageClass: sa-p6-gp3
+    size: 8Gi
+
+auth-database:
+  enabled: true
+  namespaceOverride: sa-p6
+  auth:
+    username: postgres
+    password: ""
+    database: auth_db
+  primary:
+    persistence:
+      enabled: true
+      storageClass: sa-p6-gp3
+      size: 8Gi
+
+catalog-database:
+  enabled: true
+  namespaceOverride: sa-p6
+  auth:
+    username: postgres
+    password: ""
+    database: catalog_db
+  primary:
+    persistence:
+      enabled: true
+      storageClass: sa-p6-gp3
+      size: 8Gi
+
+orders-database:
+  enabled: true
+  namespaceOverride: sa-p6
+  auth:
+    username: postgres
+    password: ""
+    database: orders_db
+  primary:
+    persistence:
+      enabled: true
+      storageClass: sa-p6-gp3
+      size: 8Gi
+
+payments-database:
+  enabled: true
+  namespaceOverride: sa-p6
+  auth:
+    username: postgres
+    password: ""
+    database: payments_db
+  primary:
+    persistence:
+      enabled: true
+      storageClass: sa-p6-gp3
+      size: 8Gi

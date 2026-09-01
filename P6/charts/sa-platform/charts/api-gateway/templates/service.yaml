@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name | quote }}
+  namespace: {{ .Values.global.namespace | quote }}
+spec:
+  type: {{ default "ClusterIP" .Values.service.type | quote }}
+  {{- if eq (default "ClusterIP" .Values.service.type) "LoadBalancer" }}
+  externalTrafficPolicy: Cluster
+  {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ .Chart.Name | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP

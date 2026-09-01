@@ -1,0 +1,16 @@
+{{- range $name := .Values.components }}
+{{- $service := index $.Values $name }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name | quote }}
+  namespace: {{ $.Values.namespace | quote }}
+  labels:
+    app.kubernetes.io/name: {{ $name | quote }}
+    {{- include "sa-platform.labels" $ | nindent 4 }}
+data:
+  {{- range $key, $value := $service.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

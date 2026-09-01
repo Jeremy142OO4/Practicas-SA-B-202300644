@@ -1,0 +1,33 @@
+replicaCount: 2
+image:
+  repository: ""
+  tag: "1.0.0"
+service:
+  type: ClusterIP
+  port: 4000
+secretName: ""
+config: {}
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+probes:
+  path: /health
+  startup:
+    failureThreshold: 30
+    periodSeconds: 5
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 15
+    periodSeconds: 20
+hpa:
+  minReplicas: 2
+  maxReplicas: 5
+  cpuUtilization: 70
+pdb:
+  minAvailable: 1

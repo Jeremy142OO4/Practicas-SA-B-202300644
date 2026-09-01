@@ -1,0 +1,13 @@
+# Credenciales y valores locales
+valores-secretos.yaml
+*.secreto.yaml
+.env
+*dockerhub*token*
+*DockerHub*Token*
+
+# Salidas temporales de herramientas
+*.log
+salidas/
+
+# Paquetes regenerados por helm dependency build
+charts/sa-platform/charts/*.tgz
