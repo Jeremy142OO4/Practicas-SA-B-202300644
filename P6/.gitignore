@@ -2,8 +2,6 @@
 valores-secretos.yaml
 *.secreto.yaml
 .env
-*dockerhub*token*
-*DockerHub*Token*
 
 # Salidas temporales de herramientas
 *.log

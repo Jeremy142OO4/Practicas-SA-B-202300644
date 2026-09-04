@@ -17,17 +17,5 @@ dependencies:
 - name: rabbitmq
   repository: oci://registry-1.docker.io/bitnamicharts
   version: 16.0.14
-- name: postgresql
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 18.8.13
-- name: postgresql
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 18.8.13
-- name: postgresql
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 18.8.13
-- name: postgresql
-  repository: oci://registry-1.docker.io/bitnamicharts
-  version: 18.8.13
-digest: sha256:d56440daac5d89f79f5b03bcb72f3c053bdc885d800fc71c91ecfbd77ae3441c
-generated: "2026-08-26T10:40:48.360076941-06:00"
+digest: sha256:03e8eaf395583b7d5b96e287e037b6048016bcae992ca3852fa26f8ba533603a
+generated: "2026-09-01T21:19:57.0958165-06:00"

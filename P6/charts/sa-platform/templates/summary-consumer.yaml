@@ -26,6 +26,8 @@ spec:
       annotations:
         checksum/config: {{ toJson $jobs.config | sha256sum | quote }}
     spec:
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
       serviceAccountName: summary-consumer
       securityContext:
         runAsNonRoot: true

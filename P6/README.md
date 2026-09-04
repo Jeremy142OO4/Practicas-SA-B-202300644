@@ -1,269 +1,280 @@
-# UNIVERSIDAD DE SAN CARLOS DE GUATEMALA
+# Práctica 6 - Despliegue de CronJobs en Google Kubernetes Engine
 
-## FACULTAD DE INGENIERIA
+## Datos generales
 
-### SOFTWARE AVANZADO
+- **Curso:** Software Avanzado
+- **Carné:** 202300644
+- **Proveedor de nube:** Google Cloud Platform (GCP)
+- **Servicio administrado:** Google Kubernetes Engine (GKE)
+- **Registro de imágenes:** Docker Hub privado
+- **Base de datos:** PostgreSQL 18 en NeonDB
+- **Mensajería:** RabbitMQ
 
-**Nombre:** Jeremy Estuardo Orellana Aldana  
-**Carne:** 202300644  
-**Seccion:** B
+## 1. Descripción
 
-# Practica 6 - Despliegue de la plataforma en Amazon EKS
+En esta práctica se trasladaron a la nube los dos CronJobs desarrollados previamente. La solución se ejecuta en un clúster zonal de GKE y utiliza RabbitMQ para la comunicación asíncrona y NeonDB para almacenar las ejecuciones y los resúmenes generados.
 
-## 1. Alcance
+Por indicación del auxiliar se utilizó un solo nodo para reducir el consumo de créditos. El despliegue evaluado está compuesto por:
 
-Esta practica despliega en Amazon Elastic Kubernetes Service la plataforma construida en la Practica 5. No modifica la funcionalidad de la tienda: adapta el registro de imagenes, el almacenamiento, las credenciales y la exposicion publica a un entorno de nube real.
+- `execution-recorder`: registra la fecha, hora, zona horaria y carné en NeonDB.
+- `summary-publisher`: consulta las ejecuciones y publica un resumen en RabbitMQ.
+- `summary-consumer`: recibe el mensaje y almacena el resumen en NeonDB.
+- RabbitMQ con almacenamiento persistente de GCP.
 
-El despliegue contiene API Gateway, Auth, Catalog, Orders, Payments, cuatro bases PostgreSQL, RabbitMQ, dos CronJobs y el consumidor de resumenes. El flujo de pagos permanece asincrono mediante la cola durable `payment.requests`.
+Aunque durante la preparación también se publicaron las imágenes de los microservicios de las prácticas anteriores, el despliegue activo se ajustó a los dos CronJobs que serán demostrados durante la calificación.
 
-## 2. Requisitos previos
+## 2. Recursos utilizados
 
-- Una cuenta de AWS activa con permisos para EKS, EC2, IAM y CloudFormation.
-- AWS CloudShell con AWS CLI, Docker, `kubectl`, Helm y `eksctl`.
-- Una cuenta de Docker Hub con el repositorio público `jeremy142004/sa-p6` y un token nuevo con permiso de escritura.
-- Permisos para crear clústeres, nodos administrados, roles IAM, VPC, volúmenes EBS y balanceadores.
-
-Antes de crear recursos se debe configurar un presupuesto en **AWS Billing and Cost Management > Budgets**. Una alerta informa sobre consumo, pero no detiene automaticamente los recursos. EKS, EC2, EBS y el balanceador pueden generar cargos desde el momento de su creación.
-
-Verificar las herramientas en AWS CloudShell:
-
-```bash
-aws --version
-kubectl version --client
-helm version
-eksctl version
-aws sts get-caller-identity
-```
-
-Si `eksctl` no está disponible, instalarlo desde su distribución oficial:
-
-```bash
-ARCH=amd64
-PLATFORM="$(uname -s)_$ARCH"
-curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
-curl -sL "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_checksums.txt" \
-  | grep "$PLATFORM" | sha256sum --check
-tar -xzf "eksctl_$PLATFORM.tar.gz" -C /tmp
-rm "eksctl_$PLATFORM.tar.gz"
-sudo install -m 0755 /tmp/eksctl /usr/local/bin/eksctl
-rm /tmp/eksctl
-```
-
-## 3. Estructura de P6
-
-```text
-P6/
-|-- charts/sa-platform/          Chart adaptado a Amazon EKS
-|-- scripts/p6.sh               Automatizacion para AWS CloudShell
-|-- evidencias/                 Capturas requeridas para la entrega
-|-- .gitignore                  Proteccion de credenciales locales
-`-- README.md                   Procedimiento y respuestas teoricas
-```
-
-No se incluyen diagramas porque el enunciado no los solicita.
-
-## 4. Configuracion elegida
-
-| Elemento | Configuracion |
-| --- | --- |
-| Proveedor | Amazon Web Services |
-| Kubernetes | Amazon EKS con grupo de nodos administrado |
-| Region predeterminada | `us-east-1` |
-| Nodos | 2 nodos `t3.medium` |
-| Registro | Docker Hub público: `jeremy142004/sa-p6` |
-| Entrada publica | Service `LoadBalancer` |
-| Persistencia | `sa-p6-gp3`, volúmenes Amazon EBS cifrados |
+| Recurso | Configuración |
+|---|---|
+| Proyecto de GCP | `sa-p6-202300644` |
+| Clúster | `sa-p6-clusterr` |
+| Modalidad | GKE Standard |
+| Ubicación | Zonal, `us-central1-a` |
+| Nodos | 1 |
+| Máquina | `e2-medium`, 2 vCPU compartidos y 4 GB de memoria |
+| Sistema del nodo | Container-Optimized OS con containerd |
+| Repositorio | `jeremy142004/sa-p6`, privado |
 | Namespace | `sa-p6` |
+| StorageClass | `sa-p6-balanced`, respaldada por Persistent Disk de GCP |
+| Volumen de RabbitMQ | 8 GiB |
+| Base de CronJobs | `scheduled_jobs_db` en el proyecto Neon `sa-p6-cronjobs` |
 
-El tamaño de maquina se puede cambiar al ejecutar el script si la cuota o la carga real lo requieren.
+## 3. Creación del proyecto y control de costos
 
-## 5. Creacion del clúster y del registro
+Se creó el proyecto `sa-p6-202300644` y se vinculó con una cuenta de prueba gratuita. La cuenta contaba con USD 300 en créditos. Antes de crear recursos se revisó el panel de facturación para conocer el saldo y vigilar el gasto.
 
-Clonar el repositorio y ejecutar el procedimiento desde AWS CloudShell:
+![Proyecto creado](evidencias/01-proyecto-gcp.jpeg)
+
+![Créditos de la cuenta](evidencias/02-creditos-gcp.jpeg)
+
+## 4. Creación del clúster
+
+Se habilitó Kubernetes Engine API y se creó un clúster **Standard** y **zonal**. El grupo `default-pool` se configuró con un nodo y sin autoescalado, de acuerdo con la autorización del auxiliar para reducir costos.
+
+![Configuración de un nodo](evidencias/03-configuracion-cluster.jpeg)
+
+El clúster quedó en estado `Running`, con un nodo y el plano de control en `us-central1-a`.
+
+![Clúster funcionando](evidencias/04-cluster-creado.jpeg)
+
+La laptop Fedora se utilizó únicamente como estación de administración. No aloja la solución: `gcloud`, `kubectl` y Helm se comunican por internet con el clúster real de GCP.
 
 ```bash
-cd ~/Practicas-SA-B-202300644/P6
-chmod +x scripts/p6.sh
-./scripts/p6.sh crear-infraestructura
-```
-
-El script crea un clúster EKS con exactamente dos nodos administrados, configura el contexto remoto de `kubectl`, asocia el proveedor OIDC, crea el rol mínimo requerido por EBS CSI e instala el complemento oficial de almacenamiento.
-
-Verificacion:
-
-```bash
-kubectl config current-context
+gcloud auth login
+gcloud config set project sa-p6-202300644
+gcloud container clusters get-credentials sa-p6-clusterr \
+  --zone us-central1-a \
+  --project sa-p6-202300644
 kubectl get nodes -o wide
-kubectl get storageclass
 ```
 
-Se debe capturar la consola de EKS mostrando el clúster y el grupo con dos nodos, junto con la salida de estos comandos.
+![Nodo conectado mediante kubectl](evidencias/06-kubectl-nodo-ready.jpeg)
 
-## 6. Publicacion de imagenes
+## 5. Publicación de imágenes
 
-```bash
-./scripts/p6.sh publicar-imagenes
-```
-
-El script solicita el token de Docker Hub de forma oculta, lo transmite por entrada estándar y cierra la sesión al terminar. El token nunca se escribe en el repositorio. Antes de ejecutar este paso se debe crear en Docker Hub un único repositorio público llamado `sa-p6` dentro de la cuenta `jeremy142004`.
-
-Se construyen y publican estas seis imagenes:
-
-- `api-gateway`
-- `auth-ms`
-- `catalog-ms`
-- `orders-ms`
-- `payments-ms`
-- `scheduled-jobs`
-
-Las seis imágenes se publican en un solo repositorio usando etiquetas diferentes:
+Se creó el repositorio privado `jeremy142004/sa-p6` en Docker Hub. Las imágenes se construyeron con los archivos `Dockerfile.prod` de múltiples etapas y se publicaron con las siguientes etiquetas:
 
 ```text
-jeremy142004/sa-p6:api-gateway-1.0.0
-jeremy142004/sa-p6:auth-ms-1.0.0
-jeremy142004/sa-p6:catalog-ms-1.0.0
-jeremy142004/sa-p6:orders-ms-1.0.0
-jeremy142004/sa-p6:payments-ms-1.0.0
-jeremy142004/sa-p6:scheduled-jobs-1.0.0
+api-gateway-1.0.0
+auth-ms-1.0.0
+catalog-ms-1.0.0
+orders-ms-1.0.0
+payments-ms-1.0.0
+scheduled-jobs-1.0.0
 ```
 
-Verificacion:
+![Repositorio privado y etiquetas](evidencias/05-imagenes-dockerhub.jpeg)
 
-La verificación se realiza en la pestaña **Tags** de `https://hub.docker.com/r/jeremy142004/sa-p6/tags`.
-
-## 7. Credenciales y Secrets
-
-Las credenciales reales no se almacenan en Git. Este comando genera valores criptograficamente aleatorios en `P6/valores-secretos.yaml`:
+Como el repositorio es privado, GKE utiliza el Secret `dockerhub-cred`. El token se proporciona desde la terminal y no se almacena en Git.
 
 ```bash
-./scripts/p6.sh preparar-secretos
-git check-ignore valores-secretos.yaml
+kubectl -n sa-p6 create secret docker-registry dockerhub-cred \
+  --docker-server=https://index.docker.io/v1/ \
+  --docker-username=jeremy142004 \
+  --docker-password='TOKEN_DOCKERHUB'
 ```
 
-El segundo comando debe confirmar que el archivo esta ignorado. Helm transforma esos valores en objetos `Secret`; los Pods los reciben mediante `envFrom`. Si el archivo ya existe, el script se detiene y no lo reemplaza.
+## 6. Bases de datos y Secrets
 
-## 8. Despliegue con Helm
+Se utilizaron tres proyectos de NeonDB para separar las cinco bases de datos de la plataforma:
+
+1. `sa-p6-auth-catalog`: `auth_db` y `catalog_db`.
+2. `sa-p6-orders-payments`: `orders_db` y `payments_db`.
+3. `sa-p6-cronjobs`: `scheduled_jobs_db`.
+
+Los CronJobs utilizan exclusivamente `scheduled_jobs_db`. La cadena de conexión se guarda en el Secret `scheduled-jobs-secret`. Los archivos `.env` y `P6/valores-secretos.yaml` están excluidos mediante `.gitignore`.
 
 ```bash
-./scripts/p6.sh desplegar
+git check-ignore \
+  ../P4/auth-ms/.env \
+  ../P4/catalog-ms/.env \
+  ../P4/orders-ms/.env \
+  ../P4/payments-ms/.env \
+  ../P5/cronjobs/.env \
+  valores-secretos.yaml
 ```
 
-El comando descarga las dependencias del chart, incorpora los scripts SQL de inicializacion, configura las seis etiquetas públicas de Docker Hub y realiza un `helm upgrade --install` atomico. Si el despliegue no queda listo, Helm revierte la operacion.
+Las tablas utilizadas son:
 
-Verificacion completa:
+- `scheduled_jobs.ejecuciones`
+- `scheduled_jobs.resumenes_hora`
+
+## 7. Despliegue con Helm
+
+El Chart se encuentra en `P6/charts/sa-platform`. Para el nodo `e2-medium` se redujeron únicamente las solicitudes de CPU de RabbitMQ y de los trabajos; los límites de memoria y CPU permanecen definidos.
 
 ```bash
-./scripts/p6.sh verificar
+cd P6/charts/sa-platform
+helm dependency build
+helm upgrade --install sa-platform . \
+  --namespace sa-p6 \
+  --values ../../valores-secretos.yaml \
+  --wait \
+  --timeout 12m
 ```
 
-La verificacion exige que todos los Pods esten `Ready`, espera la direccion del balanceador y realiza una peticion mediante la IP publica:
+El despliegue crea los siguientes recursos principales:
 
-```text
-http://IP_PUBLICA:4000/health
-```
+- Dos objetos `CronJob`.
+- Un `Deployment` para `summary-consumer`.
+- Un `StatefulSet` de RabbitMQ.
+- Un PVC de 8 GiB.
+- ConfigMaps, Secrets, ServiceAccounts, RBAC y NetworkPolicies.
 
-Esa solicitud se origina fuera del clúster y sirve como evidencia de acceso desde internet.
+## 8. Funcionamiento de los CronJobs
 
-## 9. Persistencia y adaptacion de red
+Los horarios configurados son:
 
-Las cuatro bases PostgreSQL y RabbitMQ solicitan volúmenes de 8 GiB con la `StorageClass` `sa-p6-gp3`. El complemento Amazon EBS CSI aprovisiona volúmenes `gp3` cifrados. Los PVC deben aparecer como `Bound`:
+| CronJob | Programación | Zona horaria |
+|---|---|---|
+| `execution-recorder` | Cada 2 minutos | `America/Guatemala` |
+| `summary-publisher` | Cada 10 minutos | `America/Guatemala` |
+
+![CronJobs creados en GKE](evidencias/07-cronjobs-gke.jpeg)
+
+Para ejecutar ambos durante la calificación:
 
 ```bash
-kubectl -n sa-p6 get pvc
-kubectl get pv
+NOMBRE_EJECUCION="prueba-ejecucion-$(date +%s)"
+kubectl -n sa-p6 create job \
+  --from=cronjob/execution-recorder "$NOMBRE_EJECUCION"
+kubectl -n sa-p6 wait \
+  --for=condition=complete "job/$NOMBRE_EJECUCION" \
+  --timeout=5m
+kubectl -n sa-p6 logs "job/$NOMBRE_EJECUCION"
+
+NOMBRE_RESUMEN="prueba-resumen-$(date +%s)"
+kubectl -n sa-p6 create job \
+  --from=cronjob/summary-publisher "$NOMBRE_RESUMEN"
+kubectl -n sa-p6 wait \
+  --for=condition=complete "job/$NOMBRE_RESUMEN" \
+  --timeout=5m
+kubectl -n sa-p6 logs "job/$NOMBRE_RESUMEN"
+
+kubectl -n sa-p6 logs deployment/summary-consumer --tail=10
 ```
 
-El API Gateway es el unico Service de tipo `LoadBalancer`. Los demas servicios permanecen como `ClusterIP`. La politica predeterminada niega trafico y luego permite de forma explicita el acceso publico al Gateway y los flujos internos necesarios.
+La prueba realizada produjo los mensajes `Ejecucion registrada`, `Resumen publicado` y `Resumen almacenado`, lo que demuestra el flujo entre GKE, NeonDB y RabbitMQ.
 
-## 10. Comunicacion asincrona
+![Ejecución y comunicación asíncrona](evidencias/08-ejecucion-cronjobs.jpeg)
 
-Orders publica las solicitudes de pago en `payment.requests`. Payments consume el mensaje, registra el resultado y notifica a Orders. La solicitud inicial devuelve `PAGO_EN_PROCESO` y posteriormente la orden cambia a `PAGADA` o `PAGO_RECHAZADO`.
+## 9. Verificación en NeonDB
 
-Para la evidencia se debe realizar el flujo funcional desde la IP publica, mostrar los logs de Orders y Payments y comprobar que ambos interactuaron con RabbitMQ:
+En el proyecto `sa-p6-cronjobs`, se selecciona la base `scheduled_jobs_db` y se abre **SQL Editor**. Las siguientes consultas muestran los registros creados por los CronJobs:
+
+```sql
+SELECT *
+FROM scheduled_jobs.ejecuciones
+ORDER BY fecha_hora DESC;
+
+SELECT *
+FROM scheduled_jobs.resumenes_hora
+ORDER BY hora DESC;
+```
+
+El primer resultado debe mostrar el carné `202300644`, la fecha de ejecución y la zona `GMT-6`. El segundo debe mostrar el identificador del evento, la hora resumida y la cantidad de ejecuciones.
+
+## 10. Comandos de comprobación
 
 ```bash
-kubectl -n sa-p6 logs deployment/orders-ms --tail=100
-kubectl -n sa-p6 logs deployment/payments-ms --tail=100
+kubectl get nodes -o wide
 kubectl -n sa-p6 get pods
+kubectl -n sa-p6 get cronjobs
+kubectl -n sa-p6 get jobs
+kubectl -n sa-p6 get pvc
+helm -n sa-p6 status sa-platform
 ```
 
-## 11. Evidencias requeridas
+Resultados esperados:
 
-Guardar las capturas en `P6/evidencias` con estos nombres sugeridos:
+- Nodo en estado `Ready`.
+- RabbitMQ y `summary-consumer` en estado `Running` y `1/1`.
+- Jobs ejecutados en estado `Complete`.
+- PVC de RabbitMQ en estado `Bound`.
+- Release de Helm en estado `deployed`.
 
-1. `01-cluster-eks.png`: clúster administrado en la consola de AWS.
-2. `02-dos-nodos.png`: los dos nodos y el contexto remoto.
-3. `03-docker-hub.png`: el repositorio público con las seis etiquetas.
-4. `04-pods-running.png`: Pods y StatefulSets disponibles.
-5. `05-pvc-bound.png`: PVC enlazados y `sa-p6-gp3`.
-6. `06-ip-publica.png`: Service `LoadBalancer` con IP externa.
-7. `07-peticion-internet.png`: respuesta exitosa mediante la direccion publica.
-8. `08-comunicacion-asincrona.png`: solicitud y procesamiento asincrono del pago.
-9. `09-costos.png`: estimacion o reporte de facturacion.
-10. `10-recursos-eliminados.png`: consola después de eliminar el clúster.
+## 11. Costos
 
-Las capturas se agregaran cuando exista el despliegue real en AWS.
+La consola estimó aproximadamente **USD 98.68 al mes**, equivalentes a cerca de **USD 0.14 por hora**, si el clúster se mantuviera encendido continuamente. Para una demostración de 15 minutos, el costo proporcional del nodo es aproximadamente USD 0.035, sin considerar pequeños cargos adicionales de disco y red.
 
-## 12. Costos aproximados y reduccion
+El costo neto mostrado inicialmente fue USD 0.00 porque la cuenta utiliza créditos gratuitos. Para reducir el consumo se aplicaron estas medidas:
 
-El despliegue genera cargos por el plano de control de EKS, dos instancias EC2, discos de arranque, cinco volúmenes EBS `gp3`, IPv4 pública y el balanceador externo. EKS con soporte estándar cobra USD 0.10 por hora por clúster, además de los demás recursos. El monto exacto depende de la región, las horas activas, el tráfico y los créditos de la cuenta; se debe adjuntar el reporte real de AWS Cost Explorer.
+- Un clúster zonal en lugar de regional.
+- Un solo nodo autorizado por el auxiliar.
+- Máquina `e2-medium`.
+- Autoescalado desactivado.
+- Bases PostgreSQL alojadas en el plan gratuito de NeonDB.
+- Eliminación del clúster al terminar las evidencias y la calificación.
 
-Para reducir costos:
+## 12. Eliminación de recursos
 
-- Mantener el clúster solo durante la demostracion.
-- Usar nodos pequeños compatibles con la carga.
-- No reservar una IP estatica innecesaria.
-- Conservar replicas y discos en el minimo requerido.
-- Configurar AWS Budgets antes del despliegue.
-- Eliminar clúster, discos y balanceador al finalizar.
-
-## 13. Eliminacion de recursos
-
-Después de guardar todas las evidencias:
+Para detener los cargos de GKE se elimina el clúster completo:
 
 ```bash
-./scripts/p6.sh eliminar
+gcloud container clusters delete sa-p6-clusterr \
+  --zone us-central1-a \
+  --project sa-p6-202300644
 ```
 
-Docker Hub se conserva porque es independiente de AWS. Después se debe revisar manualmente que no queden recursos facturables:
+Luego se comprueba que no queden recursos facturables:
 
 ```bash
-aws eks list-clusters --region us-east-1
-aws ec2 describe-instances --region us-east-1 --filters Name=instance-state-name,Values=pending,running
-aws ec2 describe-volumes --region us-east-1 --filters Name=status,Values=available,in-use
-aws elbv2 describe-load-balancers --region us-east-1
-aws elb describe-load-balancers --region us-east-1
+gcloud container clusters list
+gcloud compute instances list
+gcloud compute disks list
+gcloud compute forwarding-rules list
 ```
 
-## 14. Respuestas teoricas
+NeonDB y Docker Hub se conservan hasta después de la calificación. Al eliminar el clúster también se eliminan los Pods, Secrets y recursos del namespace. Se debe revisar en GCP que el Persistent Disk de RabbitMQ no haya quedado huérfano.
 
-### 14.1 Que es un clúster administrado y que diferencias tiene frente a uno local
+## 13. Respuestas teóricas
 
-Un clúster administrado es un entorno de Kubernetes cuyo plano de control es operado por un proveedor. Amazon EKS ofrece la API de Kubernetes, administra la disponibilidad del plano de control y lo integra con VPC, IAM, EBS y Elastic Load Balancing. En un clúster local, la computadora del estudiante simula o aloja estos componentes y normalmente no ofrece balanceadores, discos ni direcciones publicas reales.
+### ¿Qué es un clúster de Kubernetes administrado y qué diferencias tiene frente a uno local?
 
-La administración no elimina la responsabilidad del estudiante: todavía debe definir los recursos de la aplicación, imagenes, permisos, credenciales, politicas de red, escalado, observabilidad y costos.
+Es un clúster cuyo plano de control es instalado, actualizado y supervisado por un proveedor de nube. En GKE, Google mantiene la API de Kubernetes y componentes internos del plano de control. A diferencia de Minikube, los nodos son máquinas reales de Compute Engine, la red pertenece a una VPC y los discos son recursos persistentes del proveedor accesibles desde internet según las reglas configuradas.
 
-### 14.2 Que es un Service LoadBalancer y como lo implementa AWS
+### ¿Qué es un Service de tipo LoadBalancer y cómo lo implementa el proveedor?
 
-Es un Service que solicita al proveedor una entrada externa para un conjunto de Pods. Al crearlo en EKS, la integración de AWS aprovisiona un Elastic Load Balancer público. El balanceador entrega el tráfico al Service y Kubernetes lo distribuye a los Pods disponibles del API Gateway.
+Es un Service que solicita al proveedor una dirección IP y un balanceador externos para enviar tráfico hacia los Pods. En GCP, GKE crea y configura los recursos de balanceo necesarios. En el alcance evaluado de los CronJobs no fue necesario exponerlos públicamente porque son procesos programados sin una API HTTP; se administran mediante la API pública del clúster y `kubectl`.
 
-### 14.3 Que es un registro de contenedores y por que es necesario
+### ¿Qué es un registro de contenedores y por qué es necesario?
 
-Es un servicio que almacena imagenes y etiquetas de contenedores en una ubicación accesible. Docker Hub permite publicar las imágenes y, al utilizar un repositorio público, los nodos de EKS pueden descargarlas sin credenciales adicionales. Las imagenes locales no son accesibles para nodos remotos; por eso deben publicarse antes del despliegue.
+Es un servicio que almacena y distribuye imágenes versionadas. Los nodos de GKE no tienen acceso a las imágenes locales de Fedora, por lo que deben descargarlas desde Docker Hub. Como el repositorio es privado, el Secret `dockerhub-cred` autoriza la descarga.
 
-### 14.4 Que administra el proveedor y que administra el estudiante
+### ¿Qué administra el proveedor y qué sigue siendo responsabilidad del estudiante?
 
-AWS administra la infraestructura del plano de control y la API de Kubernetes. El estudiante administra el grupo de nodos, versión, cantidad y tamaño de instancias, cargas, recursos, imágenes, Secrets, NetworkPolicies, almacenamiento, exposición, monitoreo y eliminación.
+Google administra el plano de control, su disponibilidad y las integraciones de GKE con red y almacenamiento. El estudiante administra el tamaño y cantidad de nodos, imágenes, Charts, CronJobs, permisos, Secrets, NetworkPolicies, bases de datos, observabilidad, costos y eliminación de recursos.
 
-### 14.5 Que costos genera y como pueden reducirse
+### ¿Qué costos genera el despliegue y cómo pueden reducirse?
 
-Los costos principales provienen de nodos, discos, balanceador, administración del clúster, registro y transferencia. Se reducen limitando tiempo de ejecución y tamaño, usando creditos educativos, evitando recursos ociosos, configurando presupuestos y eliminando todos los recursos al concluir.
+Los cargos principales provienen de la máquina del nodo, su disco de arranque, el Persistent Disk de RabbitMQ y el tráfico de red. Se reducen utilizando un clúster zonal, una máquina pequeña, un solo nodo, tiempos cortos de ejecución, servicios gratuitos externos y eliminando el clúster cuando no se utiliza.
 
-## 15. Material oficial consultado
+## 14. Seguridad
 
-- [Creación y administración de clústeres con eksctl](https://docs.aws.amazon.com/eks/latest/eksctl/creating-and-managing-clusters.html)
-- [Almacenamiento EBS CSI en Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/ebs-csi.html)
-- [Balanceo de carga en Amazon EKS](https://docs.aws.amazon.com/eks/latest/best-practices/load-balancing.html)
-- [Precios de Amazon EKS](https://aws.amazon.com/eks/pricing/)
-- [Publicacion de imagenes en Docker Hub](https://docs.docker.com/docker-hub/repos/manage/hub-images/push/)
-- [Uso seguro de tokens de Docker Hub](https://docs.docker.com/security/access-tokens/)
+- No se versionan archivos `.env`, tokens ni `valores-secretos.yaml`.
+- Las cadenas de NeonDB se almacenan como Secrets de Kubernetes.
+- El repositorio de Docker Hub es privado.
+- Los contenedores usan usuarios sin privilegios.
+- Las NetworkPolicies restringen la comunicación entre componentes.
+- Cualquier token mostrado accidentalmente debe revocarse y sustituirse antes de volver a desplegar.

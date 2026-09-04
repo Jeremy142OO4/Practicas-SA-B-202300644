@@ -1,6 +1,6 @@
 apiVersion: v2
 name: sa-platform
-description: Plataforma de microservicios de la Practica 6 desplegada en Amazon EKS
+description: Plataforma de microservicios de la Practica 6 desplegada en Google Kubernetes Engine
 type: application
 icon: https://kubernetes.io/images/favicon.png
 version: 0.3.0
@@ -9,39 +9,24 @@ dependencies:
   - name: api-gateway
     version: 0.1.0
     repository: file://charts/api-gateway
+    condition: api-gateway.enabled
   - name: auth-ms
     version: 0.1.0
     repository: file://charts/auth-ms
+    condition: auth-ms.enabled
   - name: catalog-ms
     version: 0.1.0
     repository: file://charts/catalog-ms
+    condition: catalog-ms.enabled
   - name: orders-ms
     version: 0.1.0
     repository: file://charts/orders-ms
+    condition: orders-ms.enabled
   - name: payments-ms
     version: 0.1.0
     repository: file://charts/payments-ms
+    condition: payments-ms.enabled
   - name: rabbitmq
     version: 16.0.14
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: rabbitmq.enabled
-  - name: postgresql
-    alias: auth-database
-    version: 18.8.13
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: auth-database.enabled
-  - name: postgresql
-    alias: catalog-database
-    version: 18.8.13
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: catalog-database.enabled
-  - name: postgresql
-    alias: orders-database
-    version: 18.8.13
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: orders-database.enabled
-  - name: postgresql
-    alias: payments-database
-    version: 18.8.13
-    repository: oci://registry-1.docker.io/bitnamicharts
-    condition: payments-database.enabled

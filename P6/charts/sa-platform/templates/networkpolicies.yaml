@@ -191,9 +191,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: auth-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432
@@ -210,9 +209,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: catalog-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432
@@ -229,9 +227,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: orders-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432
@@ -262,9 +259,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: payments-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432
@@ -282,42 +278,6 @@ spec:
       ports:
         - protocol: TCP
           port: 4003
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: database-ingress
-  namespace: {{ .Values.namespace | quote }}
-spec:
-  podSelector:
-    matchExpressions:
-      - key: app.kubernetes.io/name
-        operator: In
-        values:
-          - auth-database
-          - catalog-database
-          - orders-database
-          - payments-database
-  policyTypes: [Ingress]
-  ingress:
-    {{- range $name := list "auth" "catalog" "orders" "payments" }}
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: {{ printf "%s-ms" $name | quote }}
-      ports:
-        - protocol: TCP
-          port: 5432
-    {{- end }}
-    - from:
-        {{- range $name := list "execution-recorder" "summary-publisher" "summary-consumer" }}
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: {{ $name | quote }}
-        {{- end }}
-      ports:
-        - protocol: TCP
-          port: 5432
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -359,9 +319,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: orders-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432
@@ -378,9 +337,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: orders-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432
@@ -404,9 +362,8 @@ spec:
   policyTypes: [Egress]
   egress:
     - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: orders-database
+        - ipBlock:
+            cidr: 0.0.0.0/0
       ports:
         - protocol: TCP
           port: 5432

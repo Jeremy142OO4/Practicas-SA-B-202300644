@@ -27,6 +27,8 @@ spec:
           labels:
             app.kubernetes.io/name: {{ $job.name | quote }}
         spec:
+          imagePullSecrets:
+            {{- toYaml $.Values.global.imagePullSecrets | nindent 12 }}
           restartPolicy: Never
           serviceAccountName: {{ $job.name | quote }}
           securityContext:

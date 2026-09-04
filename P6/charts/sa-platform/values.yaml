@@ -14,6 +14,8 @@ components:
 global:
   namespace: sa-p6
   imagePullPolicy: IfNotPresent
+  imagePullSecrets:
+    - name: dockerhub-cred
   networkPolicies:
     enabled: true
   securityContext:
@@ -55,26 +57,30 @@ limitRange:
 
 secrets:
   auth-ms-secret:
-    DB_PASSWORD: ""
+    DATABASE_URL: ""
     JWT_SECRET: ""
     ENCRYPTION_KEY: ""
   catalog-ms-secret:
-    DB_PASSWORD: ""
+    DATABASE_URL: ""
   orders-ms-secret:
-    DB_PASSWORD: ""
+    DATABASE_URL: ""
     RABBITMQ_URL: ""
   payments-ms-secret:
-    DB_PASSWORD: ""
+    DATABASE_URL: ""
     RABBITMQ_URL: ""
   scheduled-jobs-secret:
-    DB_PASSWORD: ""
+    DATABASE_URL: ""
     RABBITMQ_URL: ""
 
 api-gateway:
+  enabled: false
   image:
     repository: jeremy142004/sa-p6
     tag: "api-gateway-1.0.0"
-  replicaCount: 2
+  replicaCount: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 3
   service:
     type: LoadBalancer
     port: 4000
@@ -89,75 +95,74 @@ api-gateway:
     LOG_LEVEL: info
 
 auth-ms:
+  enabled: false
   image:
     repository: jeremy142004/sa-p6
     tag: "auth-ms-1.0.0"
-  replicaCount: 2
+  replicaCount: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 3
   service:
     port: 4001
   logLevel: info
   secretName: auth-ms-secret
   config:
     PORT: "4001"
-    DB_HOST: sa-platform-auth-database
-    DB_PORT: "5432"
-    DB_USER: postgres
-    DB_NAME: auth_db
     LOG_LEVEL: info
 
 catalog-ms:
+  enabled: false
   image:
     repository: jeremy142004/sa-p6
     tag: "catalog-ms-1.0.0"
-  replicaCount: 2
+  replicaCount: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 3
   service:
     port: 4002
   logLevel: info
   secretName: catalog-ms-secret
   config:
     PORT: "4002"
-    DB_HOST: sa-platform-catalog-database
-    DB_PORT: "5432"
-    DB_USER: postgres
-    DB_NAME: catalog_db
     LOG_LEVEL: info
 
 orders-ms:
+  enabled: false
   image:
     repository: jeremy142004/sa-p6
     tag: "orders-ms-1.0.0"
-  replicaCount: 2
+  replicaCount: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 3
   service:
     port: 4003
   logLevel: info
   secretName: orders-ms-secret
   config:
     PORT: "4003"
-    DB_HOST: sa-platform-orders-database
-    DB_PORT: "5432"
-    DB_USER: postgres
-    DB_NAME: orders_db
     CATALOG_URL: http://catalog-ms:4002/graphql
     PAYMENT_QUEUE: payment.requests
     LOG_LEVEL: info
 
 payments-ms:
+  enabled: false
   image:
     repository: jeremy142004/sa-p6
     tag: "payments-ms-1.0.0"
-  replicaCount: 2
+  replicaCount: 1
   hpa:
     enabled: true
+    minReplicas: 1
+    maxReplicas: 3
   service:
     port: 4004
   logLevel: info
   secretName: payments-ms-secret
   config:
     PORT: "4004"
-    DB_HOST: sa-platform-payments-database
-    DB_PORT: "5432"
-    DB_USER: postgres
-    DB_NAME: payments_db
     PAYMENT_QUEUE: payment.requests
     ORDERS_URL: http://orders-ms:4003
     LOG_LEVEL: info
@@ -169,15 +174,11 @@ scheduled-jobs:
   imagePullPolicy: IfNotPresent
   secretName: scheduled-jobs-secret
   config:
-    DB_HOST: sa-platform-orders-database
-    DB_PORT: "5432"
-    DB_USER: postgres
-    DB_NAME: orders_db
     STUDENT_ID: "202300644"
     SUMMARY_QUEUE: scheduled.summary
   resources:
     requests:
-      cpu: 100m
+      cpu: 25m
       memory: 128Mi
     limits:
       cpu: 300m
@@ -204,57 +205,13 @@ rabbitmq:
     password: ""
   persistence:
     enabled: true
-    storageClass: sa-p6-gp3
+    storageClass: sa-p6-balanced
     size: 8Gi
-
-auth-database:
-  enabled: true
-  namespaceOverride: sa-p6
-  auth:
-    username: postgres
-    password: ""
-    database: auth_db
-  primary:
-    persistence:
-      enabled: true
-      storageClass: sa-p6-gp3
-      size: 8Gi
-
-catalog-database:
-  enabled: true
-  namespaceOverride: sa-p6
-  auth:
-    username: postgres
-    password: ""
-    database: catalog_db
-  primary:
-    persistence:
-      enabled: true
-      storageClass: sa-p6-gp3
-      size: 8Gi
-
-orders-database:
-  enabled: true
-  namespaceOverride: sa-p6
-  auth:
-    username: postgres
-    password: ""
-    database: orders_db
-  primary:
-    persistence:
-      enabled: true
-      storageClass: sa-p6-gp3
-      size: 8Gi
-
-payments-database:
-  enabled: true
-  namespaceOverride: sa-p6
-  auth:
-    username: postgres
-    password: ""
-    database: payments_db
-  primary:
-    persistence:
-      enabled: true
-      storageClass: sa-p6-gp3
-      size: 8Gi
+  resourcesPreset: none
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
