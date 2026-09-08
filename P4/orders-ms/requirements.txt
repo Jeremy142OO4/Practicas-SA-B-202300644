@@ -3,3 +3,5 @@ uvicorn[standard]
 asyncpg
 httpx
 strawberry-graphql[fastapi]
+aio-pika
+python-dotenv

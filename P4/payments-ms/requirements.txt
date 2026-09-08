@@ -1,3 +1,6 @@
 fastapi
 uvicorn[standard]
 asyncpg
+aio-pika
+httpx
+python-dotenv

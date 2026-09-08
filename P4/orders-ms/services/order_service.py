@@ -298,27 +298,59 @@ class OrderService:
                 "la orden no está pendiente"
             )
 
-        resultado_pago = (
-            await self.pagos.procesar_pago(
+        await self.repositorio.actualizar_estado_orden(
+            id_orden,
+            "PAGO_EN_PROCESO",
+        )
+
+        try:
+            await self.pagos.publicar_pago(
                 orden["id_orden"],
                 id_metodo_pago,
                 orden["total"],
             )
+        except Exception:
+            await self.repositorio.actualizar_estado_orden(
+                id_orden,
+                "PENDIENTE",
+            )
+            raise
+
+        return await self.obtener_orden(
+            id_orden
         )
 
-        pago = resultado_pago["pago"]
+    async def actualizar_resultado_pago(
+        self,
+        resultado,
+    ):
+        id_orden = resultado.get("id_orden")
+        estado_pago = resultado.get("estado")
 
-        if pago["estado"] != "APROBADO":
-
-            await self.repositorio \
-                .actualizar_estado_orden(
-                    id_orden,
-                    "RECHAZADA",
-                )
-
-            return await self.obtener_orden(
-                id_orden
+        if not id_orden or estado_pago not in {
+            "APROBADO",
+            "RECHAZADO",
+        }:
+            raise ValueError(
+                "resultado de pago invalido"
             )
+
+        orden = await self.obtener_orden(
+            id_orden
+        )
+
+        if orden["estado"] in {
+            "PAGADA",
+            "RECHAZADA",
+        }:
+            return orden
+
+        if estado_pago == "RECHAZADO":
+            await self.repositorio.actualizar_estado_orden(
+                id_orden,
+                "RECHAZADA",
+            )
+            return await self.obtener_orden(id_orden)
 
         for detalle in orden["detalles"]:
 

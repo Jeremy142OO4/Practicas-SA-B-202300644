@@ -158,6 +158,27 @@ class PagoRepository:
 
         return dict(fila)
 
+    async def obtener_pago_por_orden(self, id_orden):
+        fila = await self.pool.fetchrow(
+            """
+            SELECT
+                id_pago,
+                id_metodo_pago,
+                id_orden,
+                monto,
+                estado,
+                created_at,
+                updated_at
+            FROM payments.pagos
+            WHERE id_orden = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            id_orden,
+        )
+
+        return dict(fila) if fila else None
+
     async def listar_pagos_orden(self, id_orden):
         consulta = """
             SELECT

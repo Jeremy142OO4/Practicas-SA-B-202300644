@@ -9,21 +9,20 @@ import (
 )
 
 func ConectarBaseDatos() (*pgxpool.Pool, error) {
+	conexion := os.Getenv("DATABASE_URL")
 
-	host := os.Getenv("DB_HOST")
-	puerto := os.Getenv("DB_PORT")
-	usuario := os.Getenv("DB_USER")
-	contrasena := os.Getenv("DB_PASSWORD")
-	nombreBD := os.Getenv("DB_NAME")
-
-	conexion := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s",
-		usuario,
-		contrasena,
-		host,
-		puerto,
-		nombreBD,
-	)
+	if conexion == "" {
+		modoSSL := os.Getenv("DB_SSLMODE")
+		if modoSSL == "" {
+			modoSSL = "disable"
+		}
+		conexion = fmt.Sprintf(
+			"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"),
+			os.Getenv("DB_HOST"), os.Getenv("DB_PORT"),
+			os.Getenv("DB_NAME"), modoSSL,
+		)
+	}
 
 	bd, err := pgxpool.New(
 		context.Background(),

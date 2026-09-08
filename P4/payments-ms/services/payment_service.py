@@ -19,6 +19,19 @@ class PagoService:
 
     async def procesar_pago(self, datos):
 
+        pago_existente = (
+            await self.repositorio
+            .obtener_pago_por_orden(
+                datos.id_orden
+            )
+        )
+
+        if pago_existente is not None:
+            return {
+                "pago": pago_existente,
+                "transaccion": None,
+            }
+
         metodo = await self.repositorio.obtener_metodo_pago(
             datos.id_metodo_pago
         )

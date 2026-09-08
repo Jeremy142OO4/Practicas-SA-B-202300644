@@ -3,10 +3,13 @@ from pathlib import Path
 import sys
 
 from fastapi import FastAPI
+from dotenv import load_dotenv
 from strawberry.fastapi import GraphQLRouter
 
+load_dotenv()
+
 from clients.catalog_client import CatalogClient
-from clients.payment_client import PaymentClient
+from clients.payment_publisher import PaymentPublisher
 from config.database import (
     cerrar_base_datos,
     conectar_base_datos,
@@ -14,6 +17,7 @@ from config.database import (
 from controllers.order_controller import (
     OrderController,
 )
+from models.resultado_pago import ResultadoPagoRequest
 sys.path.insert(0, str(Path(__file__).parent / "graphql"))
 from schema import crear_esquema
 from repositories.order_repository import (
@@ -28,7 +32,7 @@ repositorio = OrderRepository()
 
 catalogo = CatalogClient()
 
-pagos = PaymentClient()
+pagos = PaymentPublisher()
 
 servicio = OrderService(
     repositorio,
@@ -58,11 +62,15 @@ async def lifespan(app: FastAPI):
         pool
     )
 
+    await pagos.conectar()
+
     print(
         "Orders-ms conectado a PostgreSQL"
     )
 
     yield
+
+    await pagos.cerrar()
 
     await cerrar_base_datos(
         pool
@@ -89,3 +97,12 @@ app.include_router(
     graphql_app,
     prefix="/graphql",
 )
+
+
+@app.post("/pagos/resultado")
+async def actualizar_resultado_pago(
+    resultado: ResultadoPagoRequest,
+):
+    return await servicio.actualizar_resultado_pago(
+        resultado.model_dump()
+    )

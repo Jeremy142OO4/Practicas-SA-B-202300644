@@ -70,6 +70,11 @@ CREATE TABLE IF NOT EXISTS payments.transacciones_pago (
 );
 
 
+CREATE UNIQUE INDEX IF NOT EXISTS
+    unique_pago_por_orden
+ON payments.pagos (id_orden);
+
+
 INSERT INTO payments.metodos_pago (
     nombre,
     descripcion

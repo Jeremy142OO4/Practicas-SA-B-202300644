@@ -3,35 +3,28 @@ import os
 import httpx
 
 
-class PaymentClient:
+class OrderClient:
 
     def __init__(self):
         self.url = os.getenv(
-            "PAYMENTS_URL",
-            "http://payments-ms:4004",
+            "ORDERS_URL",
+            "http://orders-ms:4003",
         )
 
-    async def procesar_pago(
+    async def actualizar_estado_pago(
         self,
         id_orden,
-        id_metodo_pago,
-        monto,
+        estado,
     ):
-
         async with httpx.AsyncClient(
             timeout=10.0
         ) as cliente:
-
             respuesta = await cliente.post(
-                f"{self.url}/pagos/procesar",
+                f"{self.url}/pagos/resultado",
                 json={
                     "id_orden": str(id_orden),
-                    "id_metodo_pago":
-                        id_metodo_pago,
-                    "monto": float(monto),
+                    "estado": estado,
                 },
             )
-
             respuesta.raise_for_status()
-
             return respuesta.json()

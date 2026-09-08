@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "d7abf43e-6fca-4a34-a311-202300644004",
     "name": "P4 - Tienda de Videojuegos",
-    "description": "Contratos y flujo completo de la P4. Todas las solicitudes externas pasan por el API Gateway.",
+    "description": "Contratos de P4 adaptados al despliegue de P5. Todas las solicitudes externas pasan por el API Gateway y el pago normal se procesa de forma asincrona mediante RabbitMQ.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -17,7 +17,9 @@
     { "key": "productId", "value": "" },
     { "key": "cartId", "value": "" },
     { "key": "orderId", "value": "" },
-    { "key": "paymentId", "value": "" }
+    { "key": "paymentId", "value": "" },
+    { "key": "paymentPollAttempt", "value": "0" },
+    { "key": "enableLegacyDirectPayment", "value": "false" }
   ],
   "item": [
     {
@@ -170,7 +172,21 @@
             "body": { "mode": "raw", "raw": "{\n  \"query\": \"mutation { pagarOrden(idOrden: \\\"{{orderId}}\\\", idMetodoPago: 1) { idOrden total estado } }\"\n}" },
             "url": "{{baseUrl}}/orders/graphql"
           },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Orden pagada', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data.pagarOrden.estado).to.eql('PAGADA'); });"] } }]
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Pago publicado para procesamiento asincrono', () => {", "  pm.response.to.have.status(200);", "  const estado = pm.response.json().data.pagarOrden.estado;", "  pm.expect(['PAGO_EN_PROCESO', 'PAGADA']).to.include(estado);", "});", "pm.collectionVariables.set('paymentPollAttempt', '0');"] } }]
+        },
+        {
+          "name": "Consultar estado de orden (hasta PAGADA)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"query\": \"{ orden(idOrden: \\\"{{orderId}}\\\") { idOrden total estado } }\"\n}" },
+            "url": "{{baseUrl}}/orders/graphql",
+            "description": "Comprueba la consistencia eventual del pago. En Collection Runner se repite hasta 10 veces mientras el estado sea PAGO_EN_PROCESO. Con Send manual, vuelva a enviarla si el pago aun esta en proceso."
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "exec": ["const intento = Number(pm.collectionVariables.get('paymentPollAttempt') || 0);", "if (intento > 0) {", "  setTimeout(() => {}, 1000);", "}"] } },
+            { "listen": "test", "script": { "exec": ["pm.test('Consulta de orden correcta', () => pm.response.to.have.status(200));", "const respuesta = pm.response.json();", "pm.expect(respuesta.errors, JSON.stringify(respuesta.errors || [])).to.be.undefined;", "const estado = respuesta.data.orden.estado;", "pm.test('Estado asincrono valido', () => pm.expect(['PAGO_EN_PROCESO', 'PAGADA']).to.include(estado));", "let intento = Number(pm.collectionVariables.get('paymentPollAttempt') || 0);", "if (estado === 'PAGO_EN_PROCESO' && intento < 10) {", "  pm.collectionVariables.set('paymentPollAttempt', String(intento + 1));", "  pm.execution.setNextRequest(pm.info.requestName);", "} else {", "  pm.collectionVariables.set('paymentPollAttempt', '0');", "  pm.test('Pago procesado por RabbitMQ', () => pm.expect(estado).to.eql('PAGADA'));", "}"] } }
+          ]
         }
       ]
     },
@@ -182,22 +198,33 @@
           "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/payments/metodos" }
         },
         {
-          "name": "Procesar pago",
+          "name": "LEGACY P4 - Procesar pago directo (omitido por defecto)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"id_orden\": \"{{orderId}}\",\n  \"id_metodo_pago\": 1,\n  \"monto\": 250.00\n}" },
-            "url": "{{baseUrl}}/payments/procesar"
+            "url": "{{baseUrl}}/payments/procesar",
+            "description": "Contrato sincronico conservado de P4. No se usa en el flujo normal de P5 porque Orders publica el pago en RabbitMQ. Defina enableLegacyDirectPayment=true solo para probarlo aisladamente con una orden que aun no tenga pago."
           },
-          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Pago procesado', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('paymentId', pm.response.json().pago.id_pago);"] } }]
-        },
-        {
-          "name": "Consultar pago",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/payments/{{paymentId}}" }
+          "event": [
+            { "listen": "prerequest", "script": { "exec": ["if (pm.collectionVariables.get('enableLegacyDirectPayment') !== 'true') {", "  pm.execution.skipRequest();", "}"] } },
+            { "listen": "test", "script": { "exec": ["pm.test('Pago procesado', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('paymentId', pm.response.json().pago.id_pago);"] } }
+          ]
         },
         {
           "name": "Consultar pagos por orden",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/payments/orden/{{orderId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/payments/orden/{{orderId}}",
+            "description": "Consulta el pago creado por el consumidor de RabbitMQ y guarda su identificador para la siguiente solicitud."
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Consulta de pagos correcta', () => pm.response.to.have.status(200));", "const pagos = pm.response.json();", "pm.test('Existe un pago para la orden', () => pm.expect(pagos.length).to.be.greaterThan(0));", "if (pagos.length > 0) pm.collectionVariables.set('paymentId', pagos[0].id_pago);"] } }]
+        },
+        {
+          "name": "Consultar pago",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/payments/{{paymentId}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Consulta de pago correcta', () => pm.response.to.have.status(200));", "pm.expect(pm.response.json().id_pago).to.eql(pm.collectionVariables.get('paymentId'));"] } }]
         }
       ]
     }
