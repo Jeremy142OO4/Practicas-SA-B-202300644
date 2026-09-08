@@ -1,9 +1,15 @@
 import os
 
 import asyncpg
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 async def conectar():
+    url_base_datos = os.environ.get("DATABASE_URL")
+    if url_base_datos:
+        return await asyncpg.connect(dsn=url_base_datos)
     return await asyncpg.connect(
         host=os.environ["DB_HOST"],
         port=int(os.getenv("DB_PORT", "5432")),

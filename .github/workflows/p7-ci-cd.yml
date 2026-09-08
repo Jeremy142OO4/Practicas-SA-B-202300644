@@ -3,10 +3,10 @@ name: P7 CI-CD
 on:
   push:
     branches: [main, develop]
-    paths: ["P4/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
+    paths: ["P4/**", "P5/cronjobs/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
   pull_request:
     branches: [main]
-    paths: ["P4/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
+    paths: ["P4/**", "P5/cronjobs/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
   release:
     types: [published]
   workflow_dispatch:
@@ -33,36 +33,44 @@ jobs:
         include:
           - service: api-gateway
             language: go
+            context: P4/api-gateway
           - service: auth-ms
             language: go
+            context: P4/auth-ms
           - service: catalog-ms
             language: go
+            context: P4/catalog-ms
           - service: orders-ms
             language: python
+            context: P4/orders-ms
           - service: payments-ms
             language: python
+            context: P4/payments-ms
+          - service: scheduled-jobs
+            language: python
+            context: P5/cronjobs
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         if: matrix.language == 'go'
         with:
-          go-version-file: P4/${{ matrix.service }}/go.mod
-          cache-dependency-path: P4/${{ matrix.service }}/go.sum
+          go-version-file: ${{ matrix.context }}/go.mod
+          cache-dependency-path: ${{ matrix.context }}/go.sum
       - name: Compilar servicio Go
         if: matrix.language == 'go'
-        working-directory: P4/${{ matrix.service }}
+        working-directory: ${{ matrix.context }}
         run: go build ./...
       - uses: actions/setup-python@v6
         if: matrix.language == 'python'
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: P4/${{ matrix.service }}/requirements.txt
+          cache-dependency-path: ${{ matrix.context }}/requirements.txt
       - name: Validar servicio Python
         if: matrix.language == 'python'
         run: |
-          python -m pip install -r P4/${{ matrix.service }}/requirements.txt
-          python -m compileall -q P4/${{ matrix.service }}
+          python -m pip install -r ${{ matrix.context }}/requirements.txt
+          python -m compileall -q ${{ matrix.context }}
 
   test:
     name: Test - ${{ matrix.category }} (${{ matrix.weight }})
@@ -102,7 +110,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api-gateway, auth-ms, catalog-ms, orders-ms, payments-ms]
+        include:
+          - service: api-gateway
+            context: P4/api-gateway
+          - service: auth-ms
+            context: P4/auth-ms
+          - service: catalog-ms
+            context: P4/catalog-ms
+          - service: orders-ms
+            context: P4/orders-ms
+          - service: payments-ms
+            context: P4/payments-ms
+          - service: scheduled-jobs
+            context: P5/cronjobs
     steps:
       - uses: actions/checkout@v6
       - uses: docker/setup-buildx-action@v3
@@ -112,8 +132,8 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: P4/${{ matrix.service }}
-          file: P4/${{ matrix.service }}/Dockerfile.prod
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile.prod
           push: true
           tags: |
             ${{ env.IMAGE_REPOSITORY }}:${{ matrix.service }}-${{ github.sha }}
@@ -150,27 +170,35 @@ jobs:
           printf '%s' "$P7_VALUES_YAML" > "$RUNNER_TEMP/p7-values.yaml"
       - name: Desplegar imágenes validadas
         run: |
-          helm dependency build P6/charts/sa-platform
+          helm dependency update P6/charts/sa-platform
           helm upgrade --install sa-platform P6/charts/sa-platform \
             --namespace sa-p7 --create-namespace \
             --values "$RUNNER_TEMP/p7-values.yaml" \
             --set global.namespace=sa-p7 \
-            --set global.imagePullSecrets[0].name=dockerhub-cred \
+            --set-json 'global.imagePullSecrets=[]' \
+            --set rabbitmq.namespaceOverride=sa-p7 \
             --set api-gateway.enabled=true \
             --set auth-ms.enabled=true \
             --set catalog-ms.enabled=true \
             --set orders-ms.enabled=true \
             --set payments-ms.enabled=true \
+            --set api-gateway.resources.requests.cpu=10m \
+            --set auth-ms.resources.requests.cpu=10m \
+            --set catalog-ms.resources.requests.cpu=10m \
+            --set orders-ms.resources.requests.cpu=10m \
+            --set payments-ms.resources.requests.cpu=10m \
             --set-string api-gateway.image.repository="${IMAGE_REPOSITORY}" \
             --set-string auth-ms.image.repository="${IMAGE_REPOSITORY}" \
             --set-string catalog-ms.image.repository="${IMAGE_REPOSITORY}" \
             --set-string orders-ms.image.repository="${IMAGE_REPOSITORY}" \
             --set-string payments-ms.image.repository="${IMAGE_REPOSITORY}" \
+            --set-string scheduled-jobs.image.repository="${IMAGE_REPOSITORY}" \
             --set-string api-gateway.image.tag="api-gateway-${GITHUB_SHA}" \
             --set-string auth-ms.image.tag="auth-ms-${GITHUB_SHA}" \
             --set-string catalog-ms.image.tag="catalog-ms-${GITHUB_SHA}" \
             --set-string orders-ms.image.tag="orders-ms-${GITHUB_SHA}" \
             --set-string payments-ms.image.tag="payments-ms-${GITHUB_SHA}" \
+            --set-string scheduled-jobs.image.tag="scheduled-jobs-${GITHUB_SHA}" \
             --wait --timeout 12m
           kubectl -n sa-p7 rollout status deployment --all --timeout=5m
           rm -f "$RUNNER_TEMP/p7-values.yaml"
