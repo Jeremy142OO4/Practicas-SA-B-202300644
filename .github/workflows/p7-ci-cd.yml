@@ -2,7 +2,8 @@ name: P7 CI-CD
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
+    tags: ["v*"]
     paths: ["P4/**", "P5/cronjobs/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
   pull_request:
     branches: [main]
@@ -103,7 +104,7 @@ jobs:
   publish:
     name: Docker - ${{ matrix.service }}
     needs: [build, test]
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -144,7 +145,7 @@ jobs:
   deploy:
     name: Deploy - GKE
     needs: publish
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy)
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy)
     runs-on: ubuntu-latest
     environment: production
     permissions:

@@ -79,11 +79,11 @@ flowchart TB
 |---|---|---|---|
 | Pull request hacia `main` | Sí | No | No |
 | Push a `main` | Sí | Sí | No |
-| Push a `develop` | Sí | No | No |
+| Push de un tag `v*` | Sí | Sí | Sí |
 | Release publicado | Sí | Sí | Sí |
 | Ejecución manual | Sí | Sí | Solo con `deploy=true` |
 
-Los filtros de ruta evitan ejecuciones ajenas a P4, los CronJobs de P5, el chart de P6, P7 o el propio workflow. La combinación de ramas, releases y tags por SHA da trazabilidad entre código fuente, imagen y despliegue.
+Los filtros de ruta evitan ejecuciones ajenas a P4, los CronJobs de P5, el chart de P6, P7 o el propio workflow. Un tag de versión como `v1.0.0` ejecuta el flujo completo hasta GKE. La combinación de la rama principal, releases, tags Git y tags Docker por SHA da trazabilidad entre código fuente, imagen y despliegue.
 
 ## 4. Configuración protegida
 
