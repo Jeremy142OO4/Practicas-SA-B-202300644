@@ -200,5 +200,7 @@ jobs:
             --set-string payments-ms.image.tag="payments-ms-${GITHUB_SHA}" \
             --set-string scheduled-jobs.image.tag="scheduled-jobs-${GITHUB_SHA}" \
             --wait --timeout 12m
-          kubectl -n sa-p7 rollout status deployment --all --timeout=5m
+          for despliegue in $(kubectl -n sa-p7 get deployments -o name); do
+            kubectl -n sa-p7 rollout status "$despliegue" --timeout=5m
+          done
           rm -f "$RUNNER_TEMP/p7-values.yaml"
