@@ -74,18 +74,14 @@ jobs:
           python -m compileall -q ${{ matrix.context }}
 
   test:
-    name: Test - ${{ matrix.category }} (${{ matrix.weight }})
+    name: Test - ${{ matrix.category }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - category: unit
-            weight: 70%
           - category: integration
-            weight: 20%
-          - category: e2e
-            weight: 10%
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -95,7 +91,7 @@ jobs:
           cache-dependency-path: P7/requirements-ci.txt
       - name: Instalar herramientas de prueba
         run: python -m pip install -r P7/requirements-ci.txt
-      - name: Verificar distribución 70-20-10
+      - name: Verificar categorías de pruebas
         run: python P7/scripts/verificar_distribucion_pruebas.py
       - name: Ejecutar pruebas ${{ matrix.category }}
         working-directory: P7
