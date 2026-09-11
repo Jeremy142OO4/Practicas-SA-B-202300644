@@ -6,19 +6,13 @@ Automatizar la integración, validación, publicación y entrega del ecosistema 
 
 ## 2. Arquitectura del pipeline
 
-El workflow se encuentra en `.github/workflows/p7-ci-cd.yml` y separa el proceso en las cuatro fases solicitadas por el enunciado.
+El workflow se encuentra en `.github/workflows/p7-ci-cd.yml`. El diagrama muestra las fases de build, test, dockerización y despliegue.
 
-```mermaid
-flowchart LR
-    A[Push o pull request] --> B[Build]
-    B --> C[Test 70/20/10]
-    C -->|main, release o ejecución manual| D[Docker build y push]
-    D --> E[(Docker Hub público)]
-    E -->|release o ejecución manual con deploy| F[Autenticación en GCP]
-    F --> G[Helm upgrade/install]
-    G --> H[GKE: namespace sa-p7]
-    H --> I[Validación de rollouts]
-```
+![Arquitectura del pipeline CI/CD](evidencias/ArquitecturaPipeline.png)
+
+El flujo inicia con un cambio en GitHub. Primero se compilan los seis componentes y se ejecutan las pruebas unitarias y de integración. Si algo falla, el pipeline se detiene.
+
+Cuando las validaciones pasan, las imágenes se publican en Docker Hub. Un tag `v*`, un release o una ejecución manual con `deploy=true` también actualiza GKE mediante Helm. Al final se verifica que los servicios estén disponibles en el namespace `sa-p7`.
 
 ### Fase 1: Build
 
@@ -26,15 +20,14 @@ Una matriz compila `api-gateway`, `auth-ms` y `catalog-ms` con Go. También inst
 
 ### Fase 2: Test
 
-Las pruebas se ejecutan en tres jobs independientes para que GitHub Actions muestre claramente el resultado y peso de cada categoría:
+Las pruebas se ejecutan en dos jobs independientes para que GitHub Actions muestre claramente el resultado de cada categoría:
 
-| Categoría | Archivos | Proporción | Propósito |
-|---|---:|---:|---|
-| Unitarias | 7 | 70% | Reglas de carrito, órdenes y pagos con dependencias aisladas |
-| Integración | 2 | 20% | Colaboración de órdenes con catálogo, repositorio y mensajería |
-| E2E | 1 | 10% | Contrato completo de imágenes y despliegue |
+| Categoría | Archivos | Propósito |
+|---|---:|---|
+| Unitarias | 7 | Reglas de carrito, órdenes y pagos con dependencias aisladas |
+| Integración | 2 | Colaboración de órdenes con catálogo, repositorio y mensajería |
 
-Cada caso se encuentra en un archivo independiente y usa nombres de pruebas, funciones y variables en español. `scripts/verificar_distribucion_pruebas.py` detiene el pipeline si falta una marca o si la relación deja de ser exactamente 7/2/1.
+Cada caso se encuentra en un archivo independiente y usa nombres de pruebas, funciones y variables en español. `scripts/verificar_distribucion_pruebas.py` comprueba que existan siete pruebas unitarias y dos de integración.
 
 ### Fase 3: Dockerización y publicación
 
@@ -51,27 +44,9 @@ Cada imagen recibe dos etiquetas: `<servicio>-<SHA>` conserva una versión inmut
 
 ### Fase 4: Despliegue en GKE
 
-El job de despliegue se activa al publicar un release o mediante `workflow_dispatch` con la opción `deploy=true`. La Action se autentica con una cuenta de servicio, obtiene las credenciales del clúster y ejecuta `helm upgrade --install` en el namespace `sa-p7`.
+El job de despliegue se activa al subir un tag `v*`, publicar un release o mediante `workflow_dispatch` con la opción `deploy=true`. La Action se autentica con una cuenta de servicio, obtiene las credenciales del clúster y ejecuta `helm upgrade --install` en el namespace `sa-p7`.
 
 El archivo privado de valores llega desde un GitHub Secret temporal, nunca se versiona y se elimina del runner al terminar. Helm toma las imágenes etiquetadas con el SHA exacto de la ejecución, actualiza los deployments y espera que todos sus rollouts estén disponibles.
-
-```mermaid
-flowchart TB
-    LB[LoadBalancer :4000] --> API[API Gateway]
-    API --> AUTH[Auth MS]
-    API --> CAT[Catalog MS]
-    API --> ORD[Orders MS]
-    API --> PAY[Payments MS]
-    AUTH --> NEON[(NeonDB)]
-    CAT --> NEON
-    ORD --> NEON
-    PAY --> NEON
-    ORD --> RMQ[(RabbitMQ)]
-    PAY --> RMQ
-    CRON[CronJobs] --> NEON
-    CRON --> RMQ
-    RMQ --> CONSUMER[Summary Consumer]
-```
 
 ## 3. Disparadores y versionamiento
 
@@ -110,14 +85,13 @@ python -m pip install -r requirements-ci.txt
 python scripts/verificar_distribucion_pruebas.py
 pytest -m unit -v
 pytest -m integration -v
-pytest -m e2e -v
 ```
 
 Las diez pruebas no requieren Docker. La construcción real de contenedores y el despliegue se validan en GitHub Actions y GKE.
 
 ## 6. Resultado comprobado
 
-- Suite local: 10 de 10 pruebas aprobadas y distribución 70/20/10 válida.
+- Suite local: 9 de 9 pruebas aprobadas. Son siete unitarias y dos de integración.
 - Registry: repositorio público con imágenes de los cinco microservicios y `scheduled-jobs`.
 - Helm: release `sa-platform`, chart `0.3.0`, estado `deployed` en `sa-p7`.
 - Kubernetes: seis deployments disponibles, RabbitMQ operativo y cinco HPA con métricas.
@@ -130,7 +104,6 @@ Las capturas exigidas se almacenan en `P7/evidencias/`:
 
 - `dockerhub-imagenes-publicadas.png`: repositorio público e imágenes publicadas.
 - `github-actions-pipeline-exitoso.png`: ejecución completa del pipeline en Actions.
-- `github-actions-pruebas.png`: jobs de pruebas unitarias, integración y E2E.
 - `gke-cluster-desplegado.png`: detalles del clúster `p7-202300644`.
 - `gke-cargas-trabajo.png`: microservicios, RabbitMQ y CronJobs con estado correcto en `sa-p7`.
 - `gke-cronjobs.png`: programación y últimas ejecuciones exitosas del CronJob.
@@ -159,4 +132,4 @@ Los datos sensibles se almacenan como GitHub Secrets cifrados y solo se inyectan
 
 ### ¿Qué evita que un cambio no validado llegue a GKE?
 
-El job Docker depende de build y test; a su vez, deploy depende de que todas las imágenes se hayan publicado. Además, el despliegue solo se habilita con un release o una ejecución manual explícita. Esta cadena conserva el mismo SHA desde el commit hasta los pods.
+El job Docker depende de build y test; a su vez, deploy depende de que todas las imágenes se hayan publicado. Además, el despliegue solo se habilita con un tag `v*`, un release o una ejecución manual explícita. Esta cadena conserva el mismo SHA desde el commit hasta los pods.
