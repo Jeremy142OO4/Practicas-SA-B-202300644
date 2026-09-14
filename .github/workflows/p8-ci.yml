@@ -179,7 +179,10 @@ jobs:
       - name: Verificar firma antes de solicitar el cambio GitOps
         env:
           IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
-        run: cosign verify "$IMAGE" --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com'
+        run: |
+          cosign verify "$IMAGE" \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            --certificate-identity-regexp '^https://github.com/${{ github.repository }}/.github/workflows/p8-ci.yml@refs/heads/main$'
 
   gitops-pr:
     name: Solicitar promoción en GitOps
