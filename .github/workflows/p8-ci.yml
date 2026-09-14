@@ -1,0 +1,219 @@
+name: P8 GitOps CI/CD
+
+# Se mantiene manual durante el desarrollo para no consumir ejecuciones por
+# cada cambio. ArgoCD, y no este workflow, aplica los manifiestos al clúster.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Versión semántica candidata, por ejemplo v1.0.0
+        required: true
+        default: v1.0.0
+        type: string
+      publish:
+        description: Construir, publicar, firmar imágenes y abrir PR en GitOps
+        required: true
+        default: false
+        type: boolean
+      registry:
+        description: Prefijo del registro, sin una barra final
+        required: true
+        default: ghcr.io/jeremy142oo4
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  quality:
+    name: Pruebas, Helm y Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Ejecutar pruebas heredadas
+        working-directory: P7
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+          python scripts/verificar_distribucion_pruebas.py
+          pytest -m 'unit or integration' -v
+
+      - name: Configurar Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validar chart reutilizado por ambiente
+        run: |
+          helm dependency update P6/charts/sa-platform
+          helm lint P6/charts/sa-platform -f P8/helm/values-dev.yaml
+          helm lint P6/charts/sa-platform -f P8/helm/values-prod.yaml
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Validar infraestructura declarativa
+        working-directory: P8/terraform
+        run: |
+          terraform fmt -check
+          terraform init -backend=false
+          terraform validate
+
+  supply-chain:
+    name: Trivy y SBOM
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Analizar vulnerabilidades críticas
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: P8
+          scanners: vuln,misconfig,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: false
+          exit-code: '1'
+
+      - name: Generar SBOM CycloneDX
+        uses: anchore/sbom-action@v0
+        with:
+          path: P4/api-gateway
+          format: cyclonedx-json
+          output-file: sbom-api-gateway-${{ inputs.version }}.cdx.json
+          upload-artifact: true
+
+  build-sign:
+    name: Construir y firmar imágenes
+    if: ${{ inputs.publish }}
+    needs: supply-chain
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: api-gateway
+            context: P4/api-gateway
+          - name: auth-ms
+            context: P4/auth-ms
+          - name: catalog-ms
+            context: P4/catalog-ms
+          - name: orders-ms
+            context: P4/orders-ms
+          - name: payments-ms
+            context: P4/payments-ms
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Iniciar sesión en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar imagen versionada
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile.prod
+          load: true
+          push: false
+          tags: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+
+      - name: Bloquear imagen con vulnerabilidades críticas
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          severity: CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+
+      - name: Generar SBOM de la imagen
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          format: cyclonedx-json
+          output-file: sbom-${{ matrix.name }}-${{ inputs.version }}.cdx.json
+          upload-artifact: true
+
+      - name: Publicar únicamente la imagen aprobada
+        env:
+          IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+        run: docker push "$IMAGE"
+
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Firmar imagen con identidad OIDC
+        env:
+          IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+        run: cosign sign --yes "$IMAGE"
+
+      - name: Verificar firma antes de solicitar el cambio GitOps
+        env:
+          IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+        run: cosign verify "$IMAGE" --certificate-oidc-issuer-regexp 'https://token.actions.githubusercontent.com'
+
+  gitops-pr:
+    name: Solicitar promoción en GitOps
+    if: ${{ inputs.publish }}
+    needs: build-sign
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio GitOps
+        uses: actions/checkout@v6
+        with:
+          repository: Jeremy142OO4/Practicas-SA-B-202300644-gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: gitops
+
+      - name: Actualizar imagen del Rollout
+        working-directory: gitops
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+          path = Path('rollouts/api-gateway-rollout.yaml')
+          text = path.read_text()
+          image = f"image: {os.environ['REGISTRY']}/sa-api-gateway:{os.environ['VERSION']}"
+          updated, count = re.subn(
+              r'(?m)^\s+image:\s+\S+/sa-api-gateway:\S+$',
+              f'          {image}',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit('No se encontró la imagen api-gateway esperada')
+          path.write_text(updated)
+          PY
+
+      - name: Abrir Pull Request de promoción
+        uses: peter-evans/create-pull-request@v7
+        with:
+          path: gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+          commit-message: "chore: promover imágenes a ${{ inputs.version }}"
+          title: "chore: promover imágenes a ${{ inputs.version }}"
+          body: |
+            PR generado por P8 después de pruebas, Trivy, SBOM, firma y verificación Cosign.
+            ArgoCD será el único componente que aplicará este cambio al clúster.
+          branch: automation/promote-${{ inputs.version }}

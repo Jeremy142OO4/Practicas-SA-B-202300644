@@ -1,0 +1,17 @@
+# Archivos temporales de trabajo y evidencias locales
+tmp/
+salidas/
+*.log
+
+# Secretos y archivos locales
+.env
+.env.*
+!.env.example
+*.secreto.yaml
+valores-secretos.yaml
+
+# Salidas de herramientas
+.pytest_cache/
+__pycache__/
+*.py[cod]
+

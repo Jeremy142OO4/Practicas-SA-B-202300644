@@ -1,0 +1,48 @@
+global:
+  namespace: sa-p8
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+
+api-gateway:
+  enabled: true
+  image:
+    repository: ghcr.io/jeremy142oo4/sa-api-gateway
+    tag: v1.0.0
+  service:
+    type: ClusterIP
+    port: 4000
+
+auth-ms:
+  enabled: true
+  image:
+    repository: ghcr.io/jeremy142oo4/sa-auth-ms
+    tag: v1.0.0
+
+catalog-ms:
+  enabled: true
+  image:
+    repository: ghcr.io/jeremy142oo4/sa-catalog-ms
+    tag: v1.0.0
+
+orders-ms:
+  enabled: true
+  image:
+    repository: ghcr.io/jeremy142oo4/sa-orders-ms
+    tag: v1.0.0
+
+payments-ms:
+  enabled: true
+  image:
+    repository: ghcr.io/jeremy142oo4/sa-payments-ms
+    tag: v1.0.0
+
+rabbitmq:
+  enabled: true

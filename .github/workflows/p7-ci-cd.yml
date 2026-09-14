@@ -1,15 +1,6 @@
 name: P7 CI-CD
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-    paths: ["P4/**", "P5/cronjobs/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
-  pull_request:
-    branches: [main]
-    paths: ["P4/**", "P5/cronjobs/**", "P6/**", "P7/**", ".github/workflows/p7-ci-cd.yml"]
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       deploy:

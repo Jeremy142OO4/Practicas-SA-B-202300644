@@ -1,0 +1,4 @@
+# Completar localmente si se necesita un contexto específico.
+# kubeconfig_path = "C:/ruta/local/al/kubeconfig"
+# kube_context    = "nombre-del-contexto"
+
