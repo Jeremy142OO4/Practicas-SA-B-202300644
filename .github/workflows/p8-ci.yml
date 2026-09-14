@@ -103,14 +103,24 @@ jobs:
         include:
           - name: api-gateway
             context: P4/api-gateway
+            dockerfile: P4/api-gateway/Dockerfile.prod
+            port: '4000'
           - name: auth-ms
             context: P4/auth-ms
+            dockerfile: P4/auth-ms/Dockerfile.prod
+            port: '4001'
           - name: catalog-ms
             context: P4/catalog-ms
+            dockerfile: P4/catalog-ms/Dockerfile.prod
+            port: '4002'
           - name: orders-ms
             context: P4/orders-ms
+            dockerfile: P8/docker/Dockerfile.python
+            port: '4003'
           - name: payments-ms
             context: P4/payments-ms
+            dockerfile: P8/docker/Dockerfile.python
+            port: '4004'
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v6
@@ -129,7 +139,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          file: ${{ matrix.context }}/Dockerfile.prod
+          file: ${{ matrix.dockerfile }}
+          build-args: |
+            SERVICE_PORT=${{ matrix.port }}
           load: true
           push: false
           tags: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
