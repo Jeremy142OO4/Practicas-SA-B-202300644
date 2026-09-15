@@ -2,3 +2,10 @@
 # kubeconfig_path = "C:/ruta/local/al/kubeconfig"
 # kube_context    = "nombre-del-contexto"
 
+project_id     = "sa-202300644"
+region         = "us-central1"
+zone           = "us-central1-a"
+cluster_name   = "p7-202300644"
+node_count     = 2
+jwt_secret     = "valor-local-no-commitear"
+encryption_key = "valor-local-no-commitear"

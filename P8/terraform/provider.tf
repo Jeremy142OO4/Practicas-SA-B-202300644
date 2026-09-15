@@ -1,5 +1,13 @@
-provider "kubernetes" {
-  config_path    = var.kubeconfig_path
-  config_context = var.kube_context
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
+data "google_client_config" "current" {}
+
+provider "kubernetes" {
+  host                   = "https://${google_container_cluster.p8.endpoint}"
+  token                  = data.google_client_config.current.access_token
+  cluster_ca_certificate = base64decode(google_container_cluster.p8.master_auth[0].cluster_ca_certificate)
+}

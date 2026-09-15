@@ -75,6 +75,24 @@ resource "kubernetes_service_account" "workload" {
   }
 }
 
+resource "kubernetes_secret" "auth_source" {
+  metadata {
+    name      = "auth-ms-secret"
+    namespace = kubernetes_namespace.p8.metadata[0].name
+    labels = {
+      "app.kubernetes.io/managed-by" = "terraform"
+      "app.kubernetes.io/part-of"    = "practica-8"
+    }
+  }
+
+  type = "Opaque"
+
+  data = {
+    JWT_SECRET     = var.jwt_secret
+    ENCRYPTION_KEY = var.encryption_key
+  }
+}
+
 resource "kubernetes_role" "workload_read" {
   metadata {
     name      = "p8-workload-read"
