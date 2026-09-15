@@ -18,7 +18,7 @@ P8 agrega la infraestructura, la seguridad, el flujo GitOps y la documentación.
 | Chart Helm y subcharts | `P6/charts/sa-platform/` |
 | Pruebas unitarias e integración | `P7/tests/` |
 | Verificador de pruebas | `P7/scripts/verificar_distribucion_pruebas.py` |
-| Prueba de carga | `P5/load-tests/load.js` |
+| Pruebas anteriores | `P7/tests/` |
 
 No se copiaron estas carpetas dentro de P8. Los archivos de P8 solo las
 referencian cuando hace falta.
@@ -108,20 +108,20 @@ Resultado comprobado:
 
 ## 7. Despliegue canary
 
-El Rollout de `api-gateway` usa tres pasos de análisis:
+El Rollout de `api-gateway` usa tres porcentajes de tráfico:
 
 | Paso | Tráfico | Validación |
 |---|---:|---|
-| 1 | 10% | Humo, 3 llamadas a `/health` |
+| 1 | 10% | Pausa de observación |
 | 2 | 30% | Integración, 2 comprobaciones |
-| 3 | 60% | Humo final después de la pausa |
+| 3 | 60% | Pausa final de observación |
 
 Entre los pasos hay pausas. Si una validación falla, Argo Rollouts detiene la
 promoción y conserva la versión estable.
 
-La prueba de carga quedó definida en el repositorio, pero no se ejecutó porque
-el auxiliar indicó que ya no era necesaria para esta entrega. Esto evita gastar
-recursos del clúster y no cambia el flujo de GitOps.
+Las pruebas de humo y carga fueron retiradas porque el auxiliar indicó que ya no
+se realizan. Se conserva únicamente la validación de integración. Esto evita
+gastar recursos del clúster y no cambia el flujo de GitOps.
 
 ![Nodos de GKE listos](evidencias/02-gke-nodos-ready.png)
 
@@ -170,8 +170,10 @@ Kyverno:      políticas Ready y en modo Enforce
 
 ## 11. Evidencia del fallo controlado
 
-Durante las pruebas anteriores se provocó un fallo en el análisis de carga. La
+Durante las pruebas anteriores se provocó un fallo en un análisis canary. La
 promoción fue abortada porque el valor observado superó el límite configurado.
+Ese análisis pertenece al flujo anterior y no forma parte de la configuración
+actual.
 Ese registro pertenece al clúster anterior, antes de reconstruir la
 infraestructura con Terraform, y se conserva como evidencia del comportamiento
 de contención.

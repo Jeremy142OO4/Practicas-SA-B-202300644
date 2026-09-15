@@ -6,7 +6,6 @@ P8 no copia las aplicaciones ni los charts completos de las prácticas anteriore
 |---|---|---|
 | Microservicios y Dockerfiles productivos | `P4/` | Build y publicación de las imágenes de la candidata |
 | Chart Helm base | `P6/charts/sa-platform/` | Referencia para la parametrización y los recursos existentes |
-| Prueba de carga | `P5/load-tests/load.js` | Recurso disponible; no se ejecutó por indicación del auxiliar |
 | Pruebas unitarias e integración | `P7/tests/` | Puerta de calidad del pipeline |
 | Verificación de categorías | `P7/scripts/verificar_distribucion_pruebas.py` | Comprobación de la suite heredada |
 | Evidencias anteriores | `P5/Documentacion/` y `P7/evidencias/` | Contexto histórico, no sustituyen las evidencias de P8 |

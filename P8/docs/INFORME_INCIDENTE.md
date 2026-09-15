@@ -3,7 +3,7 @@
 ## Qué falló
 
 Se probó una versión que no pasó el análisis configurado para el canary. La
-métrica de carga quedó en estado `Failed` y superó el límite permitido.
+métrica quedó en estado `Failed` y superó el límite permitido.
 
 Esta prueba se realizó antes de reconstruir el clúster anterior con Terraform.
 La captura se conserva en
@@ -15,7 +15,7 @@ Argo Rollouts informó:
 
 ```text
 RolloutAborted: Rollout aborted update to revision 5
-Metric "load" assessed Failed
+Metric assessed Failed
 failed (1) > failureLimit (0)
 ```
 
@@ -35,7 +35,7 @@ con Terraform y se verificó nuevamente el estado saludable.
 
 ## Cómo prevenirlo
 
-- Mantener las pruebas de humo e integración antes de promover.
+- Mantener la prueba de integración antes de promover.
 - Usar imágenes versionadas y firmadas.
 - Revisar las imágenes con Trivy.
 - Mantener Kyverno en modo `Enforce`.
