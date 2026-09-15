@@ -1,16 +1,16 @@
-# Repositorio GitOps
+# Repositorio GitOps de P8
 
-Esta carpeta documenta la frontera del repositorio GitOps independiente
-solicitado por la practica.
+La copia real está en:
 
-La copia de trabajo real esta en:
+<https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops>
 
-`C:\Users\Jeremy\Documents\Github\Practicas-SA-B-202300644-gitops`
+Este repositorio es independiente y contiene solamente:
 
-Repositorio publico:
+- La aplicación de ArgoCD.
+- Manifiestos de `sa-p8`.
+- Argo Rollouts y sus análisis.
+- Políticas Kyverno.
+- Referencias seguras para External Secrets.
 
-https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops
-
-No se copian aqui `P4/`, `P5/`, `P6/` ni `P7/`. El repositorio GitOps
-contiene solamente manifiestos declarativos, la aplicacion de ArgoCD, Argo
-Rollouts, `AnalysisTemplate`, politicas y referencias seguras a secretos.
+No contiene las carpetas `P4/`, `P5/`, `P6/` ni `P7/`. Por eso no se duplica el
+código de las prácticas anteriores.

@@ -1,13 +1,22 @@
-# Empaquetado Helm de P8
+# Helm de P8
 
-P8 reutiliza el chart compuesto de `P6/charts/sa-platform/` y sus subcharts,
-sin copiar el código de las plantillas. Los archivos de esta carpeta son los
-valores por ambiente que usa el pipeline para validar la parametrización.
+P8 reutiliza el chart de `P6/charts/sa-platform/`. No se copiaron las plantillas
+de los microservicios.
 
-- `values-dev.yaml`: una réplica inicial por servicio y namespace `sa-p8`.
-- `values-prod.yaml`: réplicas de alta disponibilidad y política de pull
-  `Always`.
+Los archivos de esta carpeta separan los valores por ambiente:
 
-Ambos ambientes usan etiquetas semánticas como `v1.0.0`; nunca se usa
-`latest`. Los secretos son provistos por el gestor externo referenciado en el
-repositorio GitOps.
+- `values-dev.yaml`: valores para desarrollo.
+- `values-prod.yaml`: valores para producción.
+
+Las imágenes usan versiones como `v1.0.0`; no se usa `latest`.
+
+Para validar el chart:
+
+```bash
+cd P6/charts/sa-platform
+helm dependency build
+helm lint . -f ../../../P8/helm/values-dev.yaml
+helm lint . -f ../../../P8/helm/values-prod.yaml
+```
+
+El pipeline ejecuta esta validación antes de construir y publicar las imágenes.

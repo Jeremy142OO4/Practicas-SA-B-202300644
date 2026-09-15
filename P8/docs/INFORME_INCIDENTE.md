@@ -1,22 +1,42 @@
-# Informe de incidente - fallo inducido
+# Informe de incidente - fallo controlado
 
 ## Qué falló
 
-Describir el defecto introducido deliberadamente y el comportamiento esperado frente al comportamiento observado.
+Se probó una versión que no pasó el análisis configurado para el canary. La
+métrica de carga quedó en estado `Failed` y superó el límite permitido.
+
+Esta prueba se realizó antes de reconstruir el clúster anterior con Terraform.
+La captura se conserva en
+[`evidencias/07-fallo-rollout-historico.png`](../evidencias/07-fallo-rollout-historico.png).
 
 ## Cómo se detectó
 
-Indicar el `AnalysisTemplate`, la prueba ejecutada, el umbral configurado y el valor observado que provocó el rechazo.
+Argo Rollouts informó:
+
+```text
+RolloutAborted: Rollout aborted update to revision 5
+Metric "load" assessed Failed
+failed (1) > failureLimit (0)
+```
+
+El análisis fue el que detuvo la promoción.
 
 ## Cómo se contuvo
 
-Describir la reversión automática ejecutada por Argo Rollouts e indicar qué porcentaje de tráfico estuvo expuesto.
+Argo Rollouts abortó la promoción antes de continuar con el siguiente paso. La
+versión estable quedó atendiendo el servicio. No se hizo un cambio manual en
+Kubernetes.
 
 ## Tiempo de recuperación
 
-Indicar los minutos transcurridos entre la publicación de la versión defectuosa y el retorno al estado estable.
+La captura disponible no conserva los minutos exactos del incidente. Sí confirma
+que la promoción se detuvo automáticamente. Después se reconstruyó el clúster
+con Terraform y se verificó nuevamente el estado saludable.
 
 ## Cómo prevenirlo
 
-Explicar el control adicional que habría evitado que la versión defectuosa llegara al canary.
-
+- Mantener las pruebas de humo e integración antes de promover.
+- Usar imágenes versionadas y firmadas.
+- Revisar las imágenes con Trivy.
+- Mantener Kyverno en modo `Enforce`.
+- Revisar ArgoCD después de cada cambio.

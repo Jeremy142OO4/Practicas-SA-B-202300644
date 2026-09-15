@@ -1,24 +1,37 @@
 # Flujo GitOps de P8
 
-## Responsabilidades
+## Qué hace cada parte
 
-### Repositorio de código
+### Repositorio principal
 
-Contiene el código de P4 y la configuración de P8 necesaria para validar y publicar una imagen. GitHub Actions ejecuta build, pruebas, análisis de seguridad, generación de SBOM y firma.
+Aquí están el código reutilizado, el workflow, Terraform, las políticas y la
+documentación de P8. GitHub Actions valida el cambio, construye las imágenes,
+genera el SBOM y las firma.
 
 ### Repositorio GitOps
 
-Contiene únicamente los manifiestos declarativos de Kubernetes, la aplicación de ArgoCD, los Rollouts, las políticas y la configuración segura de secretos. El cambio de imagen se realiza mediante Pull Request.
+Está separado del código principal:
 
-### Clúster
+<https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops>
 
-ArgoCD observa el repositorio GitOps y es el único componente autorizado para aplicar cambios de aplicación. Argo Rollouts controla la promoción progresiva y ejecuta los análisis antes de avanzar.
+Aquí solo se guardan los manifiestos que deben llegar al clúster. El cambio de
+imagen se solicita mediante Pull Request.
 
-## Restricciones
+### ArgoCD
 
-- El pipeline de P8 no debe contener kubeconfig.
-- El pipeline de P8 no debe ejecutar `kubectl apply`, `kubectl set image` ni `helm upgrade` contra el clúster.
-- La imagen debe usar una versión semántica derivada de Git.
-- No se debe utilizar la etiqueta `latest`.
-- Los secretos no deben almacenarse en texto plano en el repositorio GitOps.
+ArgoCD revisa la rama `main` del repositorio GitOps. Cuando encuentra un cambio,
+lo sincroniza en `sa-p8`. El pipeline no aplica manifiestos directamente.
 
+### Argo Rollouts
+
+Argo Rollouts mueve el tráfico en 10%, 30% y 60%. En cada etapa ejecuta una
+validación. Si falla, detiene la promoción y conserva la versión estable.
+
+## Reglas importantes
+
+- No se guarda `kubeconfig` en GitHub.
+- El workflow no ejecuta `kubectl apply` contra GKE.
+- No se usa la etiqueta `latest`.
+- Las imágenes se identifican con una versión.
+- Los secretos no se escriben en el repositorio GitOps.
+- Kyverno bloquea imágenes sin versión, contenedores con root y firmas no válidas.

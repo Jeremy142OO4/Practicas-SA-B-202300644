@@ -1,60 +1,273 @@
-# Practica 8 - GitOps, entrega progresiva y seguridad de la cadena de suministro
+# Práctica 8 - GitOps, canary y seguridad
 
-P8 evoluciona el flujo de P7 hacia GitOps. El repositorio de codigo valida y
-publica artefactos; el repositorio GitOps es la fuente de verdad; ArgoCD es el
-unico componente que aplica cambios al cluster; y Argo Rollouts controla la
-promocion canary.
+## 1. Objetivo
 
-## Reutilizacion sin duplicar codigo
+En esta práctica se pasó el despliegue a GitOps. GitHub Actions valida el
+código y crea las imágenes. El repositorio GitOps guarda los manifiestos. ArgoCD
+lee ese repositorio y los aplica en GKE. Argo Rollouts mueve el tráfico poco a
+poco.
 
-- Microservicios y Dockerfiles: `P4/`.
-- Chart Helm y subcharts: `P6/charts/sa-platform/`.
-- Prueba de carga: `P5/load-tests/load.js`.
-- Pruebas unitarias e integracion: `P7/tests/`.
-- Verificador de la suite: `P7/scripts/verificar_distribucion_pruebas.py`.
+La práctica usa los microservicios de las prácticas anteriores sin copiarlos.
+P8 agrega la infraestructura, la seguridad, el flujo GitOps y la documentación.
 
-P8 agrega solamente configuracion, infraestructura, politicas, manifiestos,
-documentacion y evidencias nuevas.
+## 2. Qué se reutilizó
 
-## Componentes implementados
-
-- Terraform para namespace, ResourceQuota, LimitRange, ServiceAccounts y RBAC.
-- Valores Helm separados para `dev` y `prod`, lint sobre el chart de P6.
-- Workflow manual en `.github/workflows/p8-ci.yml` con pruebas, Helm lint,
-  Terraform, Trivy, SBOM, build, firma Cosign y PR al repo GitOps.
-- Rollout canary con pesos de 10%, 30% y 60% y tres AnalysisTemplates.
-- Politicas Kyverno para bloquear `latest`, exigir recursos, impedir root y
-  verificar firmas Cosign.
-- ExternalSecret sin credenciales en texto plano.
-
-## Tabla de enlaces de entrega
-
-| Item | Enlace o dato |
+| Elemento | Ubicación original |
 |---|---|
-| Repositorio GitOps | https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops |
-| Aplicacion en ArgoCD | `sa-platform` en namespace `argocd`; destino `sa-p8` |
-| Ejecucion exitosa del pipeline | Pendiente de ejecucion manual del workflow |
-| Reversion automatica | Pendiente de evidencia del cluster en `evidencias/` |
-| Despliegue rechazado por politica | `../Practicas-SA-B-202300644-gitops/policies/` y evidencia pendiente |
-| Bloqueo por vulnerabilidad critica | Job `supply-chain` de `p8-ci.yml`; run pendiente |
-| Imagen firmada | `ghcr.io/jeremy142oo4/sa-api-gateway:v1.0.0`, al publicar la version |
-| Reporte de prueba de carga | `P5/load-tests/load.js`; reporte de ejecucion pendiente |
-| Video demostrativo | Pendiente de grabacion; incluir minutaje por criterio |
+| Microservicios y Dockerfiles | `P4/` |
+| Chart Helm y subcharts | `P6/charts/sa-platform/` |
+| Pruebas unitarias e integración | `P7/tests/` |
+| Verificador de pruebas | `P7/scripts/verificar_distribucion_pruebas.py` |
+| Prueba de carga | `P5/load-tests/load.js` |
 
-## Restricciones de seguridad
+No se copiaron estas carpetas dentro de P8. Los archivos de P8 solo las
+referencian cuando hace falta.
 
-El workflow de P8 no contiene kubeconfig, `kubectl apply`, `kubectl set image`
-ni `helm upgrade`. La promocion de una imagen se solicita mediante Pull
-Request al repositorio GitOps y la aplicacion al cluster queda a cargo de
-ArgoCD.
+## 3. Flujo de la solución
 
-El workflow de P7 se conserva, pero ambos workflows permanecen manuales
-durante el desarrollo para evitar ejecuciones automaticas.
+```mermaid
+flowchart LR
+    A[Codigo P4-P7] --> B[GitHub Actions]
+    B --> C[Imagen versionada y firmada]
+    B --> D[Pull Request GitOps]
+    D --> E[Repositorio GitOps]
+    E --> F[ArgoCD]
+    F --> G[GKE]
+    G --> H[Argo Rollouts]
+    H --> I[10% - 30% - 60%]
+```
 
-## Evidencias faltantes para el cierre
+El detalle del flujo se encuentra en [docs/FLUJO_GITOPS.md](docs/FLUJO_GITOPS.md).
 
-1. Ejecutar el workflow manual con una version semantica.
-2. Configurar el cluster y capturar ArgoCD Synced/Healthy.
-3. Capturar una promocion canary exitosa y una reversion automatica.
-4. Capturar un rechazo de Kyverno y un bloqueo de Trivy.
-5. Completar `docs/INFORME_INCIDENTE.md`, el diagrama y el video.
+## 4. Infraestructura con Terraform
+
+Terraform creó la infraestructura base. No se creó el namespace ni las reglas
+principales a mano.
+
+Se administran estos recursos:
+
+- Clúster GKE zonal `p7-202300644` en `us-central1-a`.
+- Node pool con 2 nodos para la demostración.
+- Namespace `sa-p8`.
+- `ResourceQuota` y `LimitRange`.
+- Cuentas de servicio y permisos mínimos.
+- Secret fuente usado por External Secrets.
+
+Resultado final de Terraform:
+
+![Terraform sin cambios](evidencias/01-terraform-sin-cambios.png)
+
+El mensaje `No changes` confirma que la infraestructura del clúster coincide con
+los archivos de Terraform.
+
+## 5. CI/CD de P8
+
+El workflow está en `.github/workflows/p8-ci.yml` y se ejecuta manualmente para
+no gastar ejecuciones mientras se trabaja.
+
+El pipeline realiza estas tareas:
+
+1. Ejecuta las pruebas.
+2. Valida el chart con Helm.
+3. Valida Terraform.
+4. Revisa vulnerabilidades con Trivy.
+5. Genera el SBOM.
+6. Construye las imágenes.
+7. Firma las imágenes con Cosign.
+8. Solicita la promoción en el repositorio GitOps.
+
+El workflow no usa `kubectl apply`, `kubectl set image` ni `helm upgrade` contra
+el clúster. El despliegue lo realiza ArgoCD.
+
+![Pipeline de P8 aprobado](evidencias/06-github-actions-exitoso.png)
+
+La ejecución aprobada fue la [P8 GitOps CI/CD #4](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/actions/runs/34903001811).
+En esa ejecución pasaron las pruebas, Helm, Terraform, Trivy, SBOM, build,
+firma y solicitud de promoción.
+
+## 6. Repositorio GitOps y ArgoCD
+
+El repositorio usado para los manifiestos es:
+
+<https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops>
+
+Contiene únicamente manifiestos, Rollouts, análisis, políticas y referencias a
+secretos. ArgoCD observa la rama `main` y mantiene la aplicación
+`sa-platform`.
+
+![ArgoCD y Rollout saludables](evidencias/03-argocd-rollout-healthy.png)
+
+Resultado comprobado:
+
+| Recurso | Resultado |
+|---|---|
+| Aplicación ArgoCD | `Synced` y `Healthy` |
+| Revisión actual | `0be810a` |
+| Rollout `api-gateway` | 1 disponible de 1 |
+| Pods de `sa-p8` | En ejecución |
+
+## 7. Despliegue canary
+
+El Rollout de `api-gateway` usa tres pasos de análisis:
+
+| Paso | Tráfico | Validación |
+|---|---:|---|
+| 1 | 10% | Humo, 3 llamadas a `/health` |
+| 2 | 30% | Integración, 2 comprobaciones |
+| 3 | 60% | Humo final después de la pausa |
+
+Entre los pasos hay pausas. Si una validación falla, Argo Rollouts detiene la
+promoción y conserva la versión estable.
+
+La prueba de carga quedó definida en el repositorio, pero no se ejecutó porque
+el auxiliar indicó que ya no era necesaria para esta entrega. Esto evita gastar
+recursos del clúster y no cambia el flujo de GitOps.
+
+![Nodos de GKE listos](evidencias/02-gke-nodos-ready.png)
+
+![Rollout disponible](evidencias/03-argocd-rollout-healthy.png)
+
+## 8. Secretos
+
+Las credenciales no se guardan en texto plano en GitOps. External Secrets toma
+los valores desde el SecretStore y crea los Secrets dentro de `sa-p8`.
+
+![External Secrets sincronizado](evidencias/04-external-secrets.png)
+
+Resultado comprobado:
+
+- `api-gateway-secrets`: `SecretSynced` y `Ready=True`.
+- `api-gateway-secrets`: 2 datos internos.
+- `auth-ms-secret`: 2 datos internos.
+
+Los archivos `.env`, tokens y valores privados permanecen fuera del repositorio.
+
+## 9. Seguridad
+
+Se agregaron políticas Kyverno para:
+
+- Evitar imágenes con la etiqueta `latest`.
+- Exigir usuario sin privilegios.
+- Exigir recursos de CPU y memoria.
+- Verificar la firma Cosign de las imágenes de GHCR.
+
+La prueba de Kyverno se hizo con un Pod temporal que usaba `busybox:latest`.
+El admission webhook lo rechazó y el Pod no fue creado.
+
+![Kyverno rechazando una imagen sin versión](evidencias/05-kyverno-rechazo.png)
+
+## 10. Resultado comprobado
+
+![ArgoCD sincronizado y Rollout disponible](evidencias/03-argocd-rollout-healthy.png)
+
+```text
+ArgoCD:       Synced / Healthy
+GKE:          2 nodos Ready
+api-gateway:  1 réplica disponible
+Secret:       SecretSynced / Ready=True
+Kyverno:      políticas Ready y en modo Enforce
+```
+
+## 11. Evidencia del fallo controlado
+
+Durante las pruebas anteriores se provocó un fallo en el análisis de carga. La
+promoción fue abortada porque el valor observado superó el límite configurado.
+Ese registro pertenece al clúster anterior, antes de reconstruir la
+infraestructura con Terraform, y se conserva como evidencia del comportamiento
+de contención.
+
+![Fallo de Rollout y contención](evidencias/07-fallo-rollout-historico.png)
+
+El informe completo está en [docs/INFORME_INCIDENTE.md](docs/INFORME_INCIDENTE.md).
+
+## 12. Tabla de enlaces de entrega
+
+| Elemento | Enlace o ubicación |
+|---|---|
+| Código y documentación | [Repositorio principal](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644) |
+| Workflow P8 | [p8-ci.yml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/blob/main/.github/workflows/p8-ci.yml) |
+| Ejecución aprobada | [Actions #4](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/actions/runs/34903001811) |
+| Repositorio GitOps | [Practicas-SA-B-202300644-gitops](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops) |
+| Configuración ArgoCD | [application.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/argocd/application.yaml) |
+| Rollout canary | [api-gateway-rollout.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/rollouts/api-gateway-rollout.yaml) |
+| Políticas Kyverno | [policies/](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/tree/main/policies) |
+| Informe de incidente | [docs/INFORME_INCIDENTE.md](docs/INFORME_INCIDENTE.md) |
+| Capturas | [P8/evidencias](evidencias/) |
+| Video | Pendiente de grabar antes de entregar |
+
+## 13. Comandos para comprobar el resultado
+
+```bash
+gcloud container clusters get-credentials p7-202300644 \
+  --zone us-central1-a \
+  --project sa-202300644
+
+kubectl get nodes -o wide
+kubectl get application sa-platform -n argocd
+kubectl get rollout api-gateway -n sa-p8
+kubectl get pods -n sa-p8
+kubectl get externalsecret,secret -n sa-p8
+```
+
+## 14. Costo y apagado de nodos
+
+Durante las pruebas se dejaron 2 nodos. Para bajarlos a 0:
+
+```bash
+gcloud container clusters resize p7-202300644 \
+  --node-pool default-pool \
+  --num-nodes 0 \
+  --zone us-central1-a \
+  --project sa-202300644 \
+  --quiet
+```
+
+Se debe esperar a que la operación termine en estado `DONE`. Para volver a 2:
+
+```bash
+gcloud container clusters resize p7-202300644 \
+  --node-pool default-pool \
+  --num-nodes 2 \
+  --zone us-central1-a \
+  --project sa-202300644 \
+  --quiet
+```
+
+Para revisar la operación si tarda:
+
+```bash
+gcloud container operations list \
+  --zone us-central1-a \
+  --project sa-202300644
+```
+
+## 15. Documentos de apoyo
+
+- [Flujo GitOps](docs/FLUJO_GITOPS.md)
+- [Informe de incidente](docs/INFORME_INCIDENTE.md)
+- [Reutilización sin duplicar código](docs/REUTILIZACION.md)
+- [Pruebas](tests/README.md)
+- [Terraform](terraform/README.md)
+- [Helm](helm/README.md)
+
+## 16. Respuestas rápidas
+
+### ¿Por qué ArgoCD es el que despliega?
+
+Porque el repositorio GitOps es la fuente de verdad. Así el pipeline no necesita
+acceso directo al clúster y cada cambio queda guardado en Git.
+
+### ¿Por qué no se usa `latest`?
+
+Porque puede cambiar sin avisar. Una versión como `v1.0.0` permite saber qué
+imagen se probó y facilita regresar a una versión anterior.
+
+### ¿Para qué sirve firmar la imagen?
+
+Para comprobar que la imagen fue creada por el workflow esperado y no por otra
+fuente.
+
+### ¿Qué pasa si falla un análisis?
+
+Argo Rollouts detiene la promoción. La versión estable continúa atendiendo el
+servicio y el cambio defectuoso no avanza al siguiente porcentaje.
