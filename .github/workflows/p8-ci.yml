@@ -1,7 +1,8 @@
 name: P8 GitOps CI/CD
 
-# Se mantiene manual durante el desarrollo para no consumir ejecuciones por
-# cada cambio. ArgoCD, y no este workflow, aplica los manifiestos al clúster.
+# Las validaciones se ejecutan en cada push a main. La publicación se mantiene
+# manual para evitar crear imágenes y Pull Requests innecesarios. ArgoCD, y no
+# este workflow, aplica los manifiestos al clúster.
 on:
   push:
     branches:
