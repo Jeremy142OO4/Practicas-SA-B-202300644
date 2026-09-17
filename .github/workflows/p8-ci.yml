@@ -3,6 +3,9 @@ name: P8 GitOps CI/CD
 # Se mantiene manual durante el desarrollo para no consumir ejecuciones por
 # cada cambio. ArgoCD, y no este workflow, aplica los manifiestos al clúster.
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version:
