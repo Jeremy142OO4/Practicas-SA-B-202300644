@@ -24,61 +24,7 @@ referencian cuando hace falta.
 
 ## 3. Flujo de la solución
 
-```mermaid
-flowchart TB
-    DEV["Desarrollador"] --> CODE["Repositorio principal\nP4 + configuración P8"]
-    CODE --> EVENT{"Cambio manual\no Pull Request"}
-    EVENT --> GHA
-
-    subgraph PIPE["GitHub Actions - CI/CD"]
-        GHA["Inicia workflow P8"] --> BUILD["Pruebas y Helm lint"]
-        BUILD --> INFRA["Terraform validate y plan"]
-        INFRA --> SECURITY["Trivy + SBOM + Cosign"]
-        SECURITY --> CHECK{"¿Todo correcto?"}
-        CHECK -- "No" --> STOP["Pipeline detenido"]
-        CHECK -- "Sí" --> IMAGE["Construir imagen\nversión semántica"]
-        IMAGE --> GHCR["GHCR\nimagen firmada"]
-        GHCR --> PR["Pull Request\nal repositorio GitOps"]
-    end
-
-    PR --> GITOPS["Repositorio GitOps\nmanifiestos declarativos"]
-    GITOPS --> ARGO["ArgoCD\nobserva y sincroniza"]
-
-    TF["Terraform\ninfraestructura base"] --> GKE
-    subgraph CLOUD["Clúster GKE - sa-p8"]
-        GKE["Namespace sa-p8\ncuotas, límites y RBAC"] --> APP["api-gateway"]
-        ARGO --> APP
-        ARGO --> KYVERNO["Kyverno\npolíticas de admisión"]
-        ARGO --> EXT["External Secrets"]
-        EXT --> SECRET["Secrets dentro del clúster"]
-        SECRET --> APP
-        APP --> ROLLOUT["Argo Rollouts"]
-
-        ROLLOUT --> P10["10%\npausa"]
-        P10 --> P30["30%\npausa"]
-        P30 --> INT["Análisis de integración"]
-        INT --> P60["60%\npausa final"]
-        P60 --> RESULT{"¿Validación correcta?"}
-        RESULT -- "Sí" --> STABLE["Promoción completada"]
-        RESULT -- "No" --> ABORT["Abortar Rollout\nconservar versión estable"]
-        ABORT --> STABLE
-        KYVERNO -. "bloquea cambios no permitidos" .-> APP
-    end
-
-    classDef source fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a;
-    classDef ci fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534;
-    classDef gitops fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#5b21b6;
-    classDef cloud fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#075985;
-    classDef decision fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
-    classDef fail fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
-
-    class DEV,CODE,EVENT source;
-    class GHA,BUILD,INFRA,SECURITY,IMAGE,GHCR ci;
-    class PR,GITOPS,ARGO gitops;
-    class TF,GKE,APP,ROLLOUT,EXT,SECRET,P10,P30,INT,P60,STABLE cloud;
-    class CHECK,RESULT decision;
-    class STOP,ABORT fail;
-```
+![Terraform sin cambios](evidencias/Diagrama.png)
 
 El flujo actual conserva solo la validación de integración. Las pruebas de humo
 y carga fueron retiradas por indicación del auxiliar.
