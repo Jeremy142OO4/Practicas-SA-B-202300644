@@ -25,17 +25,7 @@ referencian cuando hace falta.
 
 ## 3. Flujo de la solución
 
-```mermaid
-flowchart LR
-    A[Codigo P4-P7] --> B[GitHub Actions]
-    B --> C[Imagen versionada y firmada]
-    B --> D[Pull Request GitOps]
-    D --> E[Repositorio GitOps]
-    E --> F[ArgoCD]
-    F --> G[GKE]
-    G --> H[Argo Rollouts]
-    H --> I[10% - 30% - 60%]
-```
+![Diagrama simple del flujo GitOps](evidencias/diagrama-p8.svg)
 
 El detalle del flujo se encuentra en [docs/FLUJO_GITOPS.md](docs/FLUJO_GITOPS.md).
 
