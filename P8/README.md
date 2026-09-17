@@ -54,8 +54,9 @@ los archivos de Terraform.
 
 ## 5. CI/CD de P8
 
-El workflow está en `.github/workflows/p8-ci.yml` y se ejecuta manualmente para
-no gastar ejecuciones mientras se trabaja.
+El workflow está en `.github/workflows/p8-ci.yml`. Al hacer push en `main` se
+ejecuta solo CI; al crear un tag `v*`, se ejecuta CI/CD completo. También se
+puede ejecutar manualmente para elegir la versión y el registro.
 
 El pipeline realiza estas tareas:
 

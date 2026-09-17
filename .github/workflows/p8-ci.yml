@@ -1,12 +1,13 @@
 name: P8 GitOps CI/CD
 
-# Las validaciones se ejecutan en cada push a main. La publicación se mantiene
-# manual para evitar crear imágenes y Pull Requests innecesarios. ArgoCD, y no
+# En main se ejecuta solo CI. Los tags v* ejecutan CI/CD completo. ArgoCD, y no
 # este workflow, aplica los manifiestos al clúster.
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
@@ -93,12 +94,12 @@ jobs:
         with:
           path: P4/api-gateway
           format: cyclonedx-json
-          output-file: sbom-api-gateway-${{ inputs.version }}.cdx.json
+          output-file: sbom-api-gateway-${{ inputs.version || github.ref_name }}.cdx.json
           upload-artifact: true
 
   build-sign:
     name: Construir y firmar imágenes
-    if: ${{ inputs.publish }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
     needs: supply-chain
     runs-on: ubuntu-latest
     strategy:
@@ -148,13 +149,13 @@ jobs:
             SERVICE_PORT=${{ matrix.port }}
           load: true
           push: false
-          tags: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          tags: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
 
       - name: Bloquear imagen con vulnerabilidades críticas
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
-          image-ref: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          image-ref: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
           severity: CRITICAL
           ignore-unfixed: false
           exit-code: '1'
@@ -162,14 +163,14 @@ jobs:
       - name: Generar SBOM de la imagen
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          image: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
           format: cyclonedx-json
-          output-file: sbom-${{ matrix.name }}-${{ inputs.version }}.cdx.json
+          output-file: sbom-${{ matrix.name }}-${{ inputs.version || github.ref_name }}.cdx.json
           upload-artifact: true
 
       - name: Publicar únicamente la imagen aprobada
         env:
-          IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          IMAGE: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
         run: docker push "$IMAGE"
 
       - name: Instalar Cosign
@@ -177,20 +178,20 @@ jobs:
 
       - name: Firmar imagen con identidad OIDC
         env:
-          IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          IMAGE: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
         run: cosign sign --yes "$IMAGE"
 
       - name: Verificar firma antes de solicitar el cambio GitOps
         env:
-          IMAGE: ${{ inputs.registry }}/sa-${{ matrix.name }}:${{ inputs.version }}
+          IMAGE: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
         run: |
           cosign verify "$IMAGE" \
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-            --certificate-identity-regexp '^https://github.com/${{ github.repository }}/.github/workflows/p8-ci.yml@refs/heads/main$'
+            --certificate-identity-regexp '^https://github.com/${{ github.repository }}/.github/workflows/p8-ci.yml@refs/(heads/main|tags/.*)$'
 
   gitops-pr:
     name: Solicitar promoción en GitOps
-    if: ${{ inputs.publish }}
+    if: ${{ startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
     needs: build-sign
     runs-on: ubuntu-latest
     steps:
@@ -204,8 +205,8 @@ jobs:
       - name: Actualizar imagen del Rollout
         working-directory: gitops
         env:
-          REGISTRY: ${{ inputs.registry }}
-          VERSION: ${{ inputs.version }}
+          REGISTRY: ${{ inputs.registry || 'ghcr.io/jeremy142oo4' }}
+          VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           python - <<'PY'
           import os
@@ -230,9 +231,9 @@ jobs:
         with:
           path: gitops
           token: ${{ secrets.GITOPS_TOKEN }}
-          commit-message: "chore: promover imágenes a ${{ inputs.version }}"
-          title: "chore: promover imágenes a ${{ inputs.version }}"
+          commit-message: "chore: promover imágenes a ${{ inputs.version || github.ref_name }}"
+          title: "chore: promover imágenes a ${{ inputs.version || github.ref_name }}"
           body: |
             PR generado por P8 después de pruebas, Trivy, SBOM, firma y verificación Cosign.
             ArgoCD será el único componente que aplicará este cambio al clúster.
-          branch: automation/promote-${{ inputs.version }}
+          branch: automation/promote-${{ inputs.version || github.ref_name }}
