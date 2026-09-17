@@ -46,6 +46,11 @@ variable "services_ipv4_cidr" {
   default     = "34.118.224.0/20"
 }
 
+variable "master_authorized_network_cidr" {
+  description = "CIDR publico autorizado para administrar el plano de control, normalmente la IP publica del administrador con /32."
+  type        = string
+}
+
 variable "node_count" {
   description = "Cantidad de nodos del pool principal."
   type        = number

@@ -18,6 +18,17 @@ resource "google_container_cluster" "p8" {
   logging_service    = "logging.googleapis.com/kubernetes"
   monitoring_service = "monitoring.googleapis.com/kubernetes"
 
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  master_authorized_networks_config {
+    cidr_blocks {
+      cidr_block   = var.master_authorized_network_cidr
+      display_name = "administracion"
+    }
+  }
+
   ip_allocation_policy {
     cluster_ipv4_cidr_block  = var.cluster_ipv4_cidr
     services_ipv4_cidr_block = var.services_ipv4_cidr
@@ -80,6 +91,10 @@ resource "google_container_node_pool" "default" {
 
     shielded_instance_config {
       enable_integrity_monitoring = true
+    }
+
+    workload_metadata_config {
+      mode = "GKE_METADATA"
     }
   }
 }

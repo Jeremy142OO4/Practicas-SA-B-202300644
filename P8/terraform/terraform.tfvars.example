@@ -7,5 +7,7 @@ region         = "us-central1"
 zone           = "us-central1-a"
 cluster_name   = "p7-202300644"
 node_count     = 2
+# Reemplazar por la IP publica desde la que se administrara GKE.
+master_authorized_network_cidr = "TU_IP_PUBLICA/32"
 jwt_secret     = "valor-local-no-commitear"
 encryption_key = "valor-local-no-commitear"
