@@ -18,7 +18,6 @@ P8 agrega la infraestructura, la seguridad, el flujo GitOps y la documentación.
 | Chart Helm y subcharts | `P6/charts/sa-platform/` |
 | Pruebas unitarias e integración | `P7/tests/` |
 | Verificador de pruebas | `P7/scripts/verificar_distribucion_pruebas.py` |
-| Pruebas anteriores | `P7/tests/` |
 
 No se copiaron estas carpetas dentro de P8. Los archivos de P8 solo las
 referencian cuando hace falta.
