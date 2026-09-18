@@ -188,7 +188,7 @@ El informe completo está en [docs/INFORME_INCIDENTE.md](docs/INFORME_INCIDENTE.
 | Políticas Kyverno | [policies/](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/tree/main/policies) |
 | Informe de incidente | [docs/INFORME_INCIDENTE.md](docs/INFORME_INCIDENTE.md) |
 | Capturas | [P8/evidencias](evidencias/) |
-| Video | Pendiente de grabar antes de entregar |
+| Video | [Video de la demostración](https://drive.google.com/file/d/1QjpS9-VqYd3lxyjDROolOUZ-kku_D-ks/view?usp=sharing) |
 
 ## 13. Comandos para comprobar el resultado
 
