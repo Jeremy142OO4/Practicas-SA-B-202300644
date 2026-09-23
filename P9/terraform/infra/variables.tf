@@ -35,7 +35,7 @@ variable "cluster_ipv4_cidr" {
 
 variable "services_ipv4_cidr" {
   type    = string
-  default = "34.118.240.0/20"
+  default = "10.8.0.0/20"
 }
 
 variable "master_authorized_network_cidr" {

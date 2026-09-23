@@ -4,6 +4,7 @@ zone           = "us-central1-a"
 cluster_name   = "p9-202300644"
 node_count     = 2
 namespace      = "sa-p9"
+services_ipv4_cidr = "10.8.0.0/20"
 
 # Reemplazar por la IP pública desde la que se administrará GKE.
 master_authorized_network_cidr = "0.0.0.0/0"
