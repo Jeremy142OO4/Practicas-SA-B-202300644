@@ -12,7 +12,7 @@ TFVARS="${TFVARS:-$ROOT_DIR/P9/terraform/infra/terraform.tfvars}"
 GITOPS_DIR="${GITOPS_DIR:-$HOME/Practicas-SA-B-202300644-gitops}"
 ROOT_APPLICATION="${ROOT_APPLICATION:-$GITOPS_DIR/p9/argocd/root.yaml}"
 
-for command_name in gcloud terraform kubectl helm; do
+for command_name in gcloud terraform kubectl helm curl; do
   command -v "$command_name" >/dev/null || {
     echo "Falta la herramienta: $command_name" >&2
     exit 1
@@ -24,16 +24,43 @@ if [ ! -f "$TFVARS" ]; then
   exit 1
 fi
 
-gcloud config set project "$PROJECT_ID" >/dev/null
+export CLOUDSDK_CORE_PROJECT="$PROJECT_ID"
+export CLOUDSDK_CORE_DISABLE_PROMPTS=1
 
-if ! gcloud storage buckets describe "gs://$STATE_BUCKET" >/dev/null 2>&1; then
-  gcloud storage buckets create "gs://$STATE_BUCKET" \
-    --project="$PROJECT_ID" \
-    --location="$STATE_LOCATION" \
-    --uniform-bucket-level-access
+# La creación del estado usa la API de GCS directamente. Así se evita que una
+# espera del cliente gcloud deje el bootstrap detenido antes de Terraform.
+gcs_token() {
+  gcloud auth print-access-token
+}
+
+gcs_request() {
+  local method="$1"
+  local url="$2"
+  shift 2
+  local token
+  token="$(gcs_token)"
+  curl --fail --silent --show-error -X "$method" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    "$@" "$url"
+}
+
+bucket_status="$(curl --silent --show-error \
+  -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $(gcs_token)" \
+  "https://storage.googleapis.com/storage/v1/b/$STATE_BUCKET")"
+
+if [ "$bucket_status" = "404" ]; then
+  gcs_request POST "https://storage.googleapis.com/storage/v1/b?project=$PROJECT_ID" \
+    --data "{\"name\":\"$STATE_BUCKET\",\"location\":\"$STATE_LOCATION\",\"iamConfiguration\":{\"uniformBucketLevelAccess\":{\"enabled\":true}}}" \
+    >/dev/null
+elif [ "$bucket_status" != "200" ]; then
+  echo "No se pudo consultar el bucket de estado (HTTP $bucket_status)." >&2
+  exit 1
 fi
 
-gcloud storage buckets update "gs://$STATE_BUCKET" --versioning
+gcs_request PATCH "https://storage.googleapis.com/storage/v1/b/$STATE_BUCKET" \
+  --data '{"versioning":{"enabled":true}}' >/dev/null
 
 terraform -chdir="$ROOT_DIR/P9/terraform/infra" init -reconfigure \
   -backend-config="bucket=$STATE_BUCKET" \
