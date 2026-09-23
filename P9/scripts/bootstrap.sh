@@ -12,7 +12,7 @@ TFVARS="${TFVARS:-$ROOT_DIR/P9/terraform/infra/terraform.tfvars}"
 GITOPS_DIR="${GITOPS_DIR:-$HOME/Practicas-SA-B-202300644-gitops}"
 ROOT_APPLICATION="${ROOT_APPLICATION:-$GITOPS_DIR/p9/argocd/root.yaml}"
 
-for command_name in gcloud terraform kubectl helm curl; do
+for command_name in gcloud terraform kubectl helm curl jq timeout; do
   command -v "$command_name" >/dev/null || {
     echo "Falta la herramienta: $command_name" >&2
     exit 1
@@ -78,9 +78,41 @@ terraform -chdir="$ROOT_DIR/P9/terraform/infra" apply \
   -var-file="$TFVARS" \
   -auto-approve
 
-gcloud container clusters get-credentials "$CLUSTER_NAME" \
-  --zone "$ZONE" \
-  --project "$PROJECT_ID"
+configure_kubeconfig() {
+  if timeout 45s gcloud container clusters get-credentials "$CLUSTER_NAME" \
+    --zone "$ZONE" \
+    --project "$PROJECT_ID"; then
+    return 0
+  fi
+
+  echo "gcloud no respondió; configurando kubectl mediante la API de GKE."
+  local token cluster_json endpoint ca_file context_name
+  token="$(gcloud auth print-access-token)"
+  if [ -z "$token" ]; then
+    echo "No se pudo obtener un token de GCP para configurar kubectl." >&2
+    exit 1
+  fi
+  cluster_json="$(curl --fail --silent --show-error \
+    -H "Authorization: Bearer $token" \
+    "https://container.googleapis.com/v1/projects/$PROJECT_ID/locations/$ZONE/clusters/$CLUSTER_NAME")"
+  endpoint="$(printf '%s' "$cluster_json" | jq -r '.endpoint // empty')"
+  ca_file="$(mktemp)"
+  printf '%s' "$cluster_json" | jq -r '.masterAuth.clusterCaCertificate' | base64 --decode > "$ca_file"
+  context_name="gke_${PROJECT_ID}_${ZONE}_${CLUSTER_NAME}"
+
+  kubectl config set-cluster "$context_name" \
+    --server="https://$endpoint" \
+    --certificate-authority="$ca_file" \
+    --embed-certs=true >/dev/null
+  kubectl config set-credentials "p9-bootstrap" --token="$token" >/dev/null
+  kubectl config set-context "$context_name" \
+    --cluster="$context_name" \
+    --user="p9-bootstrap" >/dev/null
+  kubectl config use-context "$context_name" >/dev/null
+  rm -f "$ca_file"
+}
+
+configure_kubeconfig
 
 terraform -chdir="$ROOT_DIR/P9/terraform/platform" init -reconfigure \
   -backend-config="bucket=$STATE_BUCKET" \
