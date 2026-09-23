@@ -1,0 +1,66 @@
+name: P9 CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'P9/**'
+      - '.github/workflows/p9-ci.yml'
+  pull_request:
+    paths:
+      - 'P9/**'
+      - '.github/workflows/p9-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Validar Terraform y bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Revisar formato Terraform
+        run: |
+          terraform -chdir=P9/terraform/infra fmt -check -recursive
+          terraform -chdir=P9/terraform/platform fmt -check -recursive
+
+      - name: Validar infraestructura
+        run: |
+          terraform -chdir=P9/terraform/infra init -backend=false -input=false
+          terraform -chdir=P9/terraform/infra validate
+          terraform -chdir=P9/terraform/platform init -backend=false -input=false
+          terraform -chdir=P9/terraform/platform validate
+
+      - name: Revisar sintaxis del bootstrap
+        run: bash -n P9/scripts/bootstrap.sh
+
+  gitops:
+    name: Validar GitOps P9
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v6
+
+      - name: Descargar repositorio GitOps
+        uses: actions/checkout@v6
+        with:
+          repository: Jeremy142OO4/Practicas-SA-B-202300644-gitops
+          path: gitops
+
+      - name: Configurar kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Validar Kustomize sin desplegar
+        run: |
+          kubectl kustomize gitops/p9/argocd/apps >/dev/null
+          kubectl kustomize gitops/p9/platform >/dev/null
+          kubectl kustomize gitops/p9/secrets >/dev/null
+          kubectl kustomize gitops/p9/policies >/dev/null

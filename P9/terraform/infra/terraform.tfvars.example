@@ -1,0 +1,20 @@
+project_id     = "sa-202300644"
+region         = "us-central1"
+zone           = "us-central1-a"
+cluster_name   = "p9-202300644"
+node_count     = 2
+namespace      = "sa-p9"
+
+# Reemplazar por la IP pública desde la que se administrará GKE.
+master_authorized_network_cidr = "0.0.0.0/0"
+
+# Valores locales. No subir el archivo terraform.tfvars.
+jwt_secret     = "valor-local"
+encryption_key = "valor-local"
+db_password    = "valor-local"
+orders_database_url = "postgresql://p9user:valor-local@orders-db.sa-p9.svc.cluster.local:5432/orders_db"
+rabbitmq_url        = "amqp://p9user:valor-local@rabbitmq.sa-p9.svc.cluster.local:5672/"
+rabbitmq_password   = "valor-local"
+
+# Opcional. Si se omite, se usa un nombre derivado del proyecto y el clúster.
+# velero_bucket_name = "sa-202300644-p9-velero"

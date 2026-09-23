@@ -1,0 +1,21 @@
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
+}
+
+data "google_client_config" "current" {}
+
+data "google_container_cluster" "p9" {
+  name     = var.cluster_name
+  location = var.zone
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = "https://${data.google_container_cluster.p9.endpoint}"
+    token                  = data.google_client_config.current.access_token
+    cluster_ca_certificate = base64decode(data.google_container_cluster.p9.master_auth[0].cluster_ca_certificate)
+  }
+}
+

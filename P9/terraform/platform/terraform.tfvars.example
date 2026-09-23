@@ -1,0 +1,8 @@
+project_id   = "sa-202300644"
+region       = "us-central1"
+zone         = "us-central1-a"
+cluster_name = "p9-202300644"
+
+# Opcional: fijar una versión validada del chart de ArgoCD.
+# argocd_chart_version = "VERSION_VALIDADA"
+

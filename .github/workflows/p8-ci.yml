@@ -3,11 +3,7 @@ name: P8 GitOps CI/CD
 # En main se ejecuta solo CI. Los tags v* ejecutan CI/CD completo. ArgoCD, y no
 # este workflow, aplica los manifiestos al clúster.
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+  # P8 se conserva para consulta, pero queda manual mientras se trabaja P9.
   workflow_dispatch:
     inputs:
       version:
