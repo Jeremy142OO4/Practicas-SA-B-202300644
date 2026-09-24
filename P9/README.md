@@ -48,3 +48,18 @@ bootstrap.sh
 - PVC restaurado: `Bound`.
 - Dato restaurado: `p9-inicial|dato-real-de-prueba`.
 - Cluster final: 2 nodos y la aplicacion principal `Running/Ready`.
+
+## Video demostrativo
+
+- Enlace: [**Video demostrativo de la P9**](https://drive.google.com/file/d/1zS4KpNyHk5F95h6WW3VNfJK2ZDrV8X81/view?usp=sharing)
+- Duracion aproximada: **5 minutos con 36 segundos**.
+- 00:00-00:45: Presentacion del README y estructura de la carpeta P9.
+- 00:45-01:10: Informe de recuperacion y runbook.
+- 01:10-01:50: Script `bootstrap.sh` y flujo de creacion automatica.
+- 01:50-02:20: Cluster GKE P9 y conexion desde Cloud Shell.
+- 02:20-03:20: Verificacion de nodos, pods, PVC, servicios y rollout.
+- 03:20-03:50: Aplicaciones de ArgoCD en estado `Synced/Healthy`.
+- 03:50-04:15: Backup Storage Location, Schedule y backup de Velero.
+- 04:15-04:30: Detalle de la restauracion con Velero.
+- 04:30-05:05: Resultados de la restauracion y datos recuperados.
+- 05:05-05:36: Informe final con RTO, RPO y lecciones aprendidas.
