@@ -1,0 +1,2 @@
+# Conservar el PDF sin conversion de saltos de linea en Windows.
+*.pdf binary
