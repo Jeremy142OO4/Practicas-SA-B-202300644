@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 import sys
 
@@ -26,6 +27,7 @@ from repositories.order_repository import (
 from services.order_service import (
     OrderService,
 )
+from telemetry import configure_telemetry, record_business_event
 
 
 repositorio = OrderRepository()
@@ -83,6 +85,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+telemetry_provider = configure_telemetry(app, "orders-ms")
+
 
 @app.get("/health")
 async def health():
@@ -103,6 +108,17 @@ app.include_router(
 async def actualizar_resultado_pago(
     resultado: ResultadoPagoRequest,
 ):
-    return await servicio.actualizar_resultado_pago(
-        resultado.model_dump()
-    )
+    try:
+        respuesta = await servicio.actualizar_resultado_pago(
+            resultado.model_dump()
+        )
+    except Exception:
+        record_business_event("orders-ms", "payment_result", "error")
+        raise
+    record_business_event("orders-ms", "payment_result", "success")
+    return respuesta
+
+
+@app.on_event("shutdown")
+def cerrar_telemetria():
+    telemetry_provider.shutdown()

@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
+	"github.com/gofiber/contrib/otelfiber/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 
@@ -53,12 +55,21 @@ func main() {
 		)
 	}
 
+	shutdown, err := iniciarTelemetria(context.Background(), "catalog-ms")
+	if err != nil {
+		log.Fatal("No se pudo iniciar OpenTelemetry: ", err)
+	}
+	defer shutdown(context.Background())
+
 	controlador :=
 		controllers.NuevoCatalogController(
 			esquema,
 		)
 
 	app := fiber.New()
+	app.Use(otelfiber.Middleware())
+	app.Use(registrarMetricas("catalog-ms"))
+	app.Get("/metrics", endpointMetricas())
 
 	app.Get(
 		"/health",

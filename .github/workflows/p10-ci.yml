@@ -1,0 +1,136 @@
+name: P10 Observabilidad
+
+on:
+  push:
+    tags:
+      - 'p10-*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Etiqueta de las imagenes
+        required: true
+        default: p10-v1.0.0
+        type: string
+      publish:
+        description: Publicar imagenes y solicitar la promocion GitOps
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  validate:
+    name: Validar instrumentacion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+      - name: Configurar Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.5'
+      - name: Validar Go
+        run: |
+          go test ./...
+        working-directory: P4/api-gateway
+      - name: Validar catalogo
+        run: |
+          go test ./...
+        working-directory: P4/catalog-ms
+      - name: Validar Python
+        run: |
+          python -m compileall -q P4/orders-ms
+
+  build-sign:
+    name: Construir y firmar imagenes
+    if: ${{ startsWith(github.ref, 'refs/tags/p10-') || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: api-gateway
+            context: P4/api-gateway
+            dockerfile: P4/api-gateway/Dockerfile.prod
+          - name: catalog-ms
+            context: P4/catalog-ms
+            dockerfile: P4/catalog-ms/Dockerfile.prod
+          - name: orders-ms
+            context: P4/orders-ms
+            dockerfile: P4/orders-ms/Dockerfile.prod
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+      - name: Configurar Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Iniciar sesion en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Construir y publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3.7.0
+      - name: Firmar imagen
+        env:
+          IMAGE: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+        run: cosign sign --yes "$IMAGE"
+      - name: Verificar firma
+        env:
+          IMAGE: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+        run: |
+          cosign verify "$IMAGE" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github.com/${{ github.repository }}/.github/workflows/p10-ci.yml@refs/(heads/main|tags/p10-.*)$'
+
+  gitops-pr:
+    name: Solicitar promocion GitOps
+    if: ${{ startsWith(github.ref, 'refs/tags/p10-') || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
+    needs: build-sign
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar GitOps
+        uses: actions/checkout@v6
+        with:
+          repository: Jeremy142OO4/Practicas-SA-B-202300644-gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: gitops
+      - name: Actualizar imagenes
+        working-directory: gitops
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          path = Path('p10/platform/api-gateway-patch.yaml')
+          text = path.read_text()
+          text = text.replace('sa-api-gateway:p10-v1.0.0', f'sa-api-gateway:{os.environ["VERSION"]}')
+          path.write_text(text)
+          path = Path('p10/platform/workload-patch.yaml')
+          text = path.read_text()
+          for service in ('catalog-ms', 'orders-ms'):
+              text = text.replace(f'sa-{service}:p10-v1.0.0', f'sa-{service}:{os.environ["VERSION"]}')
+          path.write_text(text)
+          PY
+      - name: Abrir PR GitOps
+        uses: peter-evans/create-pull-request@v7
+        with:
+          path: gitops
+          token: ${{ secrets.GITOPS_TOKEN }}
+          commit-message: "P10 observabilidad"
+          title: "P10 observabilidad"
+          body: "Promocion de imagenes instrumentadas despues de validacion y firma."
+          branch: automation/p10-${{ inputs.version || github.ref_name }}
