@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -65,12 +66,13 @@ func registrarMetricas(service string) fiber.Handler {
 		start := time.Now()
 		err := c.Next()
 		status := c.Response().StatusCode()
-		route := c.Route().Path
+		method := strings.Clone(c.Method())
+		route := strings.Clone(c.Route().Path)
 		if route == "" {
-			route = c.Path()
+			route = strings.Clone(c.Path())
 		}
-		requestTotal.WithLabelValues(service, c.Method(), route, strconv.Itoa(status)).Inc()
-		requestDuration.WithLabelValues(service, c.Method(), route).Observe(time.Since(start).Seconds())
+		requestTotal.WithLabelValues(service, method, route, strconv.Itoa(status)).Inc()
+		requestDuration.WithLabelValues(service, method, route).Observe(time.Since(start).Seconds())
 		spanContext := trace.SpanContextFromContext(c.UserContext())
 		log.Printf(`{"service":"%s","event":"http_request","method":"%s","route":"%s","status":%d,"duration_ms":%d,"trace_id":"%s"}`,
 			service, c.Method(), route, status, time.Since(start).Milliseconds(), spanContext.TraceID().String())
