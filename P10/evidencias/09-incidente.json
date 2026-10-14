@@ -1,0 +1,218 @@
+{
+  "observerStartedUTC": "2026-10-14T20:31:54.615014+00:00",
+  "events": [
+    {
+      "timeUTC": "2026-10-14T20:32:56.435124+00:00",
+      "event": "candidateHash"
+    },
+    {
+      "timeUTC": "2026-10-14T20:33:10.648136+00:00",
+      "event": "faultStartedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:33:10.648302+00:00",
+      "event": "traceID"
+    },
+    {
+      "timeUTC": "2026-10-14T20:33:10.648354+00:00",
+      "event": "faultLog"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:16.102050+00:00",
+      "event": "alertObservedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:16.102242+00:00",
+      "event": "alert"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:18.570869+00:00",
+      "event": "burnRateAtDiagnosis"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:18.571059+00:00",
+      "event": "traceServices"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:18.571149+00:00",
+      "event": "correlatedLogs"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:18.571241+00:00",
+      "event": "causeFoundUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:18.571323+00:00",
+      "event": "diagnosisSeconds"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.133488+00:00",
+      "event": "analysisRun"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.133690+00:00",
+      "event": "analysisFinishedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.133791+00:00",
+      "event": "analysisStatus"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.134153+00:00",
+      "event": "abortObservedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.151767+00:00",
+      "event": "stableRS"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.467862+00:00",
+      "event": "stableResponseUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.468179+00:00",
+      "event": "stableResponseMilliseconds"
+    },
+    {
+      "timeUTC": "2026-10-14T20:34:22.469700+00:00",
+      "event": "completed"
+    }
+  ],
+  "candidateHash": "f546c89c7",
+  "faultStartedUTC": "2026-10-14T20:33:09.286811+00:00",
+  "traceID": "a783c66244eae44ec24cd84fa2cd7ceb",
+  "faultLog": {
+    "service": "api-gateway",
+    "event": "demo_delay",
+    "delay_ms": 1200,
+    "route": "/orders/graphql",
+    "trace_id": "a783c66244eae44ec24cd84fa2cd7ceb"
+  },
+  "alertObservedUTC": "2026-10-14T20:34:16.102038+00:00",
+  "alert": {
+    "labels": {
+      "alertname": "ApiLatencyErrorBudgetBurn",
+      "pod": "api-gateway-f546c89c7-mbwtb",
+      "severity": "warning"
+    },
+    "annotations": {
+      "description": "El consumo supera 2 veces el ritmo permitido en ventanas de 1 y 5 minutos. Revisar la candidata y seguir el runbook.",
+      "runbook_url": "https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/docs/RUNBOOK.md#latencia",
+      "summary": "Consumo acelerado del presupuesto de latencia"
+    },
+    "state": "firing",
+    "activeAt": "2026-10-14T20:33:45.828724224Z",
+    "value": "2e+01"
+  },
+  "burnRateAtDiagnosis": [
+    {
+      "metric": {
+        "__name__": "slo:canary_latency:burn_rate_1m",
+        "pod": "api-gateway-f546c89c7-mbwtb"
+      },
+      "value": [
+        1792010056.33,
+        "20"
+      ]
+    }
+  ],
+  "traceServices": [
+    "api-gateway",
+    "catalog-ms",
+    "orders-ms"
+  ],
+  "correlatedLogs": [
+    {
+      "service": "api-gateway",
+      "event": "http_request",
+      "method": "POST",
+      "route": "/orders/graphql",
+      "status": 200,
+      "duration_ms": 1320,
+      "trace_id": "a783c66244eae44ec24cd84fa2cd7ceb"
+    },
+    {
+      "service": "api-gateway",
+      "event": "demo_delay",
+      "delay_ms": 1200,
+      "route": "/orders/graphql",
+      "trace_id": "a783c66244eae44ec24cd84fa2cd7ceb"
+    },
+    {
+      "service": "catalog-ms",
+      "event": "http_request",
+      "method": "POST",
+      "route": "/graphql",
+      "status": 200,
+      "duration_ms": 2,
+      "trace_id": "a783c66244eae44ec24cd84fa2cd7ceb"
+    },
+    {
+      "service": "orders-ms",
+      "event": "http_request",
+      "method": "POST",
+      "route": "",
+      "status": 200,
+      "duration_ms": 29.76,
+      "trace_id": "a783c66244eae44ec24cd84fa2cd7ceb"
+    }
+  ],
+  "causeFoundUTC": "2026-10-14T20:34:18.571237+00:00",
+  "diagnosisSeconds": 2.469,
+  "analysisRun": "api-gateway-f546c89c7-12-2",
+  "analysisFinishedUTC": "2026-10-14T20:34:21Z",
+  "analysisStatus": {
+    "completedAt": "2026-10-14T20:34:21Z",
+    "dryRunSummary": {},
+    "message": "Metric \"canary-p95-latency\" assessed Failed due to failed (1) > failureLimit (0)",
+    "metricResults": [
+      {
+        "consecutiveSuccess": 1,
+        "count": 1,
+        "measurements": [
+          {
+            "finishedAt": "2026-10-14T20:34:21Z",
+            "phase": "Successful",
+            "startedAt": "2026-10-14T20:34:21Z",
+            "value": "[0]"
+          }
+        ],
+        "metadata": {
+          "ResolvedPrometheusQuery": "(sum(rate(http_server_requests_total{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-f546c89c7-.*\",route!~\"/health|/metrics\",status=~\"5..\"}[1m]))\nor (sum(rate(http_server_requests_total{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-f546c89c7-.*\",route!~\"/health|/metrics\"}[1m])) * 0))\n/\nsum(rate(http_server_requests_total{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-f546c89c7-.*\",route!~\"/health|/metrics\"}[1m]))\n"
+        },
+        "name": "canary-error-rate",
+        "phase": "Successful",
+        "successful": 1
+      },
+      {
+        "count": 1,
+        "failed": 1,
+        "measurements": [
+          {
+            "finishedAt": "2026-10-14T20:34:21Z",
+            "phase": "Failed",
+            "startedAt": "2026-10-14T20:34:21Z",
+            "value": "[2.425]"
+          }
+        ],
+        "metadata": {
+          "ResolvedPrometheusQuery": "histogram_quantile(0.95,\n  sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-f546c89c7-.*\",route!~\"/health|/metrics\"}[1m])))\n"
+        },
+        "name": "canary-p95-latency",
+        "phase": "Failed"
+      }
+    ],
+    "phase": "Failed",
+    "runSummary": {
+      "count": 2,
+      "failed": 1,
+      "successful": 1
+    },
+    "startedAt": "2026-10-14T20:33:36Z"
+  },
+  "abortObservedUTC": "2026-10-14T20:34:22.134145+00:00",
+  "stableRS": "fdd579dcc",
+  "stableResponseUTC": "2026-10-14T20:34:22.467848+00:00",
+  "stableResponseMilliseconds": 316.187,
+  "completed": true
+}

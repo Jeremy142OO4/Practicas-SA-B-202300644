@@ -1,93 +1,192 @@
 # Practica 10: Observabilidad y operacion
 
-P10 agrega observabilidad a la plataforma reutilizada de P9. No copia los
-microservicios ni el cluster: el codigo de negocio continua en `P4/`, la
-infraestructura base continua en `P9/` y los manifiestos de observabilidad se
-administran en el repositorio GitOps.
+P10 agrega metricas, trazas y logs a la plataforma de P9. Se reutilizan los
+servicios de P4 y el cluster creado con Terraform en P9; no se copian dentro
+de P10. El cluster se llama `p9-202300644`, en `sa-202300644`, zona
+`us-central1-a`. Los servicios trabajan en `sa-p9`.
 
-## Objetivo
+## Flujo
 
-El flujo de la practica es:
+Solicitud de carrito -> api-gateway -> orders-ms -> catalog-ms.
 
-```text
-Solicitud -> api-gateway -> orders-ms -> catalog-ms
-     |             |             |             |
-     +---- trace_id y contexto W3C en los tres servicios
-     +---- metricas HTTP y de negocio para Prometheus
-     +---- logs JSON con trace_id
+Los tres servicios propagan `traceparent` y registran el mismo `trace_id`.
+Prometheus recoge /metrics. OpenTelemetry Collector envia trazas a Tempo.
+Alloy envia logs a Loki. Grafana consulta esos tres almacenes.
+Argo Rollouts consulta Prometheus para decidir la promocion.
+Las alertas llegan a Alertmanager y enlazan a su runbook.
 
-OpenTelemetry Collector -> Tempo
-Prometheus -> reglas SLO y AnalysisTemplate de Argo Rollouts
-Prometheus + Loki + Tempo -> Grafana
+El flujo completo esta en [FLUJO.md](docs/FLUJO.md) y el
+[diagrama de telemetria](docs/DIAGRAMA.md).
+
+## Tabla de entrega - seccion 4.1
+
+| Item | Enlace o dato |
+|---|---|
+| Repositorio de codigo | [Practicas-SA-B-202300644](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644). Sigue privado por decision del usuario; su acceso publico queda pendiente. |
+| Repositorio GitOps | [Practicas-SA-B-202300644-gitops](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops), publico |
+| Servicios instrumentados | [api-gateway](../P4/api-gateway/telemetry.go), [orders-ms](../P4/orders-ms/telemetry.py) y [catalog-ms](../P4/catalog-ms/telemetry.go); namespace `sa-p9` |
+| AnalysisTemplate por metricas | `api-gateway-metrics`, [p10/platform/analysis-templates.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/platform/analysis-templates.yaml) |
+| Consultas del analisis | [Expresiones PromQL usadas](#consultas-del-analisis): errores HTTP menores a 5% y p95 menor a 500 ms |
+| SLO declarados | Disponibilidad 99% y 95% de solicitudes dentro de 500 ms; ambos con ventana de una hora. [Justificacion](docs/FLUJO.md#slo-y-presupuesto) |
+| Reglas de alerta | PrometheusRule `p10-slos`, [p10/rules/prometheus-rules.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/rules/prometheus-rules.yaml) |
+| Tablero | [JSON exportado de Grafana](dashboards/sa-platform.json), UID `p10-sa-platform`; [captura](evidencias/07-tablero.jpg) |
+| Reversion por metricas | AnalysisRun `api-gateway-f546c89c7-12-2` Failed; Rollout `api-gateway` en `sa-p9`. [Captura](evidencias/10-reversion.png) y [datos medidos](evidencias/09-incidente.json) |
+| Recorrido sintoma a causa | [Datos del recorrido](evidencias/09-incidente.json): 2.469 segundos desde alerta Firing hasta el log de la causa. [Informe](docs/INFORME_OPERACION.pdf) |
+| Video demostrativo | Pendiente por decision del usuario; debe durar 5-8 minutos e incluir URL y minutaje por punto demostrado. |
+
+## SLO y alertas
+
+| Objetivo | Ventana | Presupuesto permitido |
+|---|---|---|
+| 99% de respuestas sin HTTP 5xx | Una hora | 1% de solicitudes |
+| 95% de solicitudes dentro de 500 ms | Una hora | 5% de solicitudes |
+
+La ventana de una hora permite evaluar una sesion del laboratorio. No se
+afirma cumplimiento de 30 dias. Las reglas usan `increase(...[1h])`;
+antes de completar una hora de muestras, el resultado es provisional.
+
+El presupuesto consumido es la proporcion de solicitudes malas dividida entre
+el presupuesto permitido. Un valor de 1 significa 100% consumido.
+La velocidad de consumo se calcula en ventanas de 1 y 5 minutos.
+Las alertas exigen consumo mayor a 2 veces el permitido durante 30 segundos,
+con al menos dos solicitudes. La latencia tambien se revisa por pod candidato
+para que stable no oculte el problema.
+
+Se excluyen /health y /metrics de estos indicadores. Un error GraphQL con
+HTTP 200 no se cuenta como 5xx; el informe reconoce ese limite.
+
+| Alerta | Accion |
+|---|---|
+| ApiAvailabilityErrorBudgetBurn | Revisar errores y dependencias; confirmar la version estable. [Runbook](docs/RUNBOOK.md#disponibilidad) |
+| ApiLatencyErrorBudgetBurn | Comparar duraciones de la traza y buscar su trace_id en Loki. [Runbook](docs/RUNBOOK.md#latencia) |
+
+Las alertas contienen `runbook_url` hacia la copia publica del
+[runbook en GitOps](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/docs/RUNBOOK.md).
+La alerta instantanea redundante del canary se retiro.
+
+## Consultas del analisis
+
+Estas son las consultas resueltas del AnalysisRun fallido. El manifiesto usa
+`{{args.podHash}}`, que Argo reemplaza por el hash de la candidata. Se miden
+solicitudes reales de negocio, no el resultado de un Job de pruebas.
+
+Errores HTTP de la candidata; debe ser menor a 0.05:
+
+```promql
+(sum(rate(http_server_requests_total{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics",status=~"5.."}[1m]))
+or (sum(rate(http_server_requests_total{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics"}[1m])) * 0))
+/
+sum(rate(http_server_requests_total{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics"}[1m]))
 ```
 
-## Servicios instrumentados
+Latencia p95 de la candidata; debe ser menor a 0.5 segundos:
 
-| Servicio | Ruta del codigo | Señales |
-|---|---|---|
-| `api-gateway` | `P4/api-gateway` | trazas, metricas HTTP y logs JSON |
-| `catalog-ms` | `P4/catalog-ms` | trazas, metricas HTTP y logs JSON |
-| `orders-ms` | `P4/orders-ms` | trazas, metricas HTTP y logs JSON |
+```promql
+histogram_quantile(0.95,
+  sum by (le) (rate(http_server_request_duration_seconds_bucket{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics"}[1m])))
+```
 
-Las librerias se inicializan desde el codigo existente. El contexto W3C se
-propaga entre llamadas HTTP y todos los logs de solicitud incluyen `trace_id`.
-Ademas, `orders-ms` publica el contador de negocio `business_events_total`
-para distinguir resultados de pago exitosos y fallidos.
+Se esperan 45 segundos antes de medir. El analisis exige muestras validas;
+sin datos o con NaN no se promociona. Una medicion fallida aborta la candidata.
 
-## SLO definidos
+## Tablero y metricas de negocio
 
-| SLO | Objetivo | Ventana | Consulta |
-|---|---:|---|---|
-| Disponibilidad del API | 99% | 30 dias | `slo:api_availability:ratio` |
-| Latencia p95 del API | 95% menor a 500 ms | 30 dias | `slo:api_latency:ratio` |
+El tablero responde preguntas de latencia, trafico, errores y saturacion
+(CPU y memoria). Tambien muestra `payments_approved_total` y
+`payments_rejected_total`: resultados de pago procesados, no cobros unicos.
+En la evidencia valen cero porque no se generaron pagos para llenar la grafica.
+Una excepcion de la API no se considera un pago rechazado.
 
-Los error budgets son 1% para disponibilidad y 5% para latencia. Las alertas
-`ApiAvailabilityErrorBudgetBurn` y `ApiLatencyErrorBudgetBurn` avisan cuando
-se consume mas presupuesto del permitido.
+![Tablero de operacion](evidencias/07-tablero.jpg)
 
-Las reglas, alertas y el AnalysisTemplate se encuentran en el repositorio
-GitOps. La promocion canary consulta Prometheus mediante PromQL; no usa un Job
-de prueba como criterio de promocion.
+![Recursos y resultados de pago](evidencias/08-tablero-negocio.jpg)
 
-## Archivos de esta practica
+## Demostracion y evidencias
 
-| Archivo | Uso |
+Se agrego temporalmente `P10_DEMO_DELAY_MS=1200` a la candidata por GitOps.
+Solo /orders/graphql se volvio lenta. /health y la consulta directa al
+catalogo siguieron funcionando. Prometheus midio p95=2.425 s y errores=0.
+Argo Rollouts aborto la candidata y mantuvo stable.
+
+La consulta uso un producto inexistente y devolvio el error GraphQL esperado
+con HTTP 200. No se presenta como compra exitosa ni se genero un pago.
+
+| Resultado | Valor medido |
 |---|---|
-| `docs/FLUJO.md` | Explicacion del flujo y de las cuatro señales doradas |
-| `docs/RUNBOOK.md` | Pasos para investigar una alerta |
-| `docs/INFORME_OPERACION.md` | Informe de incidente de dos paginas |
-| `docs/DIAGRAMA.md` | Diagrama de flujo de telemetria |
-| `dashboards/sa-platform.json` | Dashboard de Grafana |
-| `evidencias/` | Capturas y resultados de la demostracion |
+| Primera señal de alerta (Pending) | 36.542 segundos desde el inicio |
+| Alerta Firing observada | 66.816 segundos desde el inicio |
+| Alerta -> metrica -> traza -> registro de la causa | 2.469 segundos, mediante consultas automatizadas |
+| Primera respuesta estable despues del aborto | 73.181 segundos desde el inicio |
+| Duracion de esa respuesta estable | 316.187 ms |
+| Trace ID correlacionado | `a783c66244eae44ec24cd84fa2cd7ceb` |
 
-## Repositorios
+![Reversion y recorrido medido](evidencias/10-reversion.png)
 
-| Elemento | Enlace |
+El [informe de operacion](docs/INFORME_OPERACION.pdf) tiene dos paginas y los
+seis campos solicitados. Su [fuente Markdown](docs/INFORME_OPERACION.md)
+explica el ajuste de alerta realizado despues del primer ensayo.
+
+| Evidencia | Que muestra |
 |---|---|
-| Codigo | [Practicas-SA-B-202300644](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644) |
-| GitOps | [Practicas-SA-B-202300644-gitops](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops) |
+| [Cluster activo](evidencias/04-cluster-activo.png) | Nodos Ready, aplicaciones y microservicios |
+| [Observabilidad](evidencias/05-observabilidad.png) | Pods y servicios del stack |
+| [Correlacion inicial](evidencias/06-telemetria.png) | La misma traza en los tres servicios antes de inducir la falla |
+| [Tablero](evidencias/07-tablero.jpg) | Las cuatro señales de oro con datos reales |
+| [Negocio](evidencias/08-tablero-negocio.jpg) | Recursos y dos contadores de resultados de pago |
+| [Incidente completo](evidencias/09-incidente.json) | Horas UTC, alerta Firing, logs, servicios de la traza y AnalysisRun |
+| [Reversion](evidencias/10-reversion.png) | Consola real SSH con el analisis Failed y los tiempos medidos |
+| [Primer ensayo](evidencias/09-reversion-inicial.json) | Reversion anterior al ajuste de alerta; no es la evidencia del recorrido completo |
 
-## Tabla de entrega
+Las evidencias antiguas 01-03 corresponden al cluster apagado. Las capturas
+de esta entrega son ventanas reales, recortadas sin agregar resultados.
 
-| Requisito | Ubicacion |
-|---|---|
-| Servicios instrumentados | `P4/api-gateway`, `P4/catalog-ms`, `P4/orders-ms` |
-| AnalysisTemplate con Prometheus | GitOps `p10/platform/analysis-templates.yaml` |
-| Consultas PromQL | GitOps `p10/observability/prometheus-rules.yaml` |
-| SLO y error budget | GitOps `p10/observability/prometheus-rules.yaml` |
-| PrometheusRule | GitOps `p10/observability/prometheus-rules.yaml` |
-| Dashboard Grafana | `dashboards/sa-platform.json` |
-| AnalysisRun fallido y Rollout | `evidencias/` (se agregan durante la prueba) |
-| Ruta sintoma a causa | `docs/INFORME_OPERACION.md` |
-| Video y minutaje | Pendiente de colocar al grabar |
+## Como consultar el proyecto
+
+Los [pasos del runbook](docs/RUNBOOK.md) incluyen la conexion desde Cloud Shell,
+las consultas de Prometheus, Tempo y Loki y como abrir Grafana.
+La clave de Grafana se consulta en su Secret; no esta guardada en Git.
+
+Los scripts de P10 recopilan datos y generan el informe:
+`observar_incidente.py` registra el incidente, `resumen_incidente.py` muestra
+los datos guardados y `generar_informe.py` genera el PDF. `demo_trafico.py`
+envia solicitudes secuenciales de baja frecuencia. No es una prueba de carga.
+`forward_servicio.py` reconecta el acceso cuando Argo cambia la candidata.
+
+## Estado y costos
+
+La version desplegada es `p10-v1.0.5`. Su
+[workflow](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/actions/runs/38629630012)
+construyo y firmo las imagenes. El
+[PR de promocion](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/pull/6)
+fue fusionado. ArgoCD aplica GitOps y Kyverno conserva la admision.
+La aplicacion `p9-platform` apunta a `p10/platform`, sin otro controlador
+de ArgoCD administrando los mismos microservicios.
+
+Se retiro la demora despues de medir el aborto automatico. El cluster
+permanece encendido con cuatro nodos e2-medium y genera costos.
+Prometheus conserva dos dias en almacenamiento temporal; no se garantiza
+que ese historial sobreviva al apagado o reemplazo del pod.
+
+Apagar los nodos al terminar:
+
+```bash
+gcloud container clusters resize p9-202300644 --node-pool default-pool \
+  --num-nodes 0 --zone us-central1-a --project sa-202300644 --quiet
+```
+
+Encenderlos:
+
+```bash
+gcloud container clusters resize p9-202300644 --node-pool default-pool \
+  --num-nodes 4 --zone us-central1-a --project sa-202300644 --quiet
+```
 
 ## Video
 
 - Enlace: **PENDIENTE**
 - Minutaje: **PENDIENTE**
+- Duracion requerida: 5-8 minutos.
 
-## Estado actual
+Quedan pendientes solamente el video y hacer publico el repositorio de codigo,
+segun lo indicado por el usuario.
 
-La preparacion local de P10 no levanta el cluster ni genera costos. Antes de
-validar en Kubernetes se deben encender temporalmente los nodos del cluster P9,
-sin modificar la configuracion base de Terraform.

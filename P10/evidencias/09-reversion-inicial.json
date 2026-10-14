@@ -1,0 +1,118 @@
+{
+  "observerStartedUTC": "2026-10-14T20:26:20.973913+00:00",
+  "events": [
+    {
+      "timeUTC": "2026-10-14T20:27:30.673220+00:00",
+      "event": "candidateHash"
+    },
+    {
+      "timeUTC": "2026-10-14T20:27:49.618013+00:00",
+      "event": "faultStartedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:27:49.618206+00:00",
+      "event": "traceID"
+    },
+    {
+      "timeUTC": "2026-10-14T20:27:49.618265+00:00",
+      "event": "faultLog"
+    },
+    {
+      "timeUTC": "2026-10-14T20:28:52.859796+00:00",
+      "event": "candidateHash"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:02.844249+00:00",
+      "event": "analysisRun"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:02.844428+00:00",
+      "event": "analysisFinishedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:02.844490+00:00",
+      "event": "analysisStatus"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:02.844586+00:00",
+      "event": "abortObservedUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:02.844652+00:00",
+      "event": "stableRS"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:03.233214+00:00",
+      "event": "stableResponseUTC"
+    },
+    {
+      "timeUTC": "2026-10-14T20:29:03.233408+00:00",
+      "event": "stableResponseMilliseconds"
+    }
+  ],
+  "candidateHash": "599d9f4867",
+  "faultStartedUTC": "2026-10-14T20:27:47.923091+00:00",
+  "traceID": "4bfb2d0a33db26c0c97f424d7b4686c1",
+  "faultLog": {
+    "service": "api-gateway",
+    "event": "demo_delay",
+    "delay_ms": 1200,
+    "route": "/orders/graphql",
+    "trace_id": "4bfb2d0a33db26c0c97f424d7b4686c1"
+  },
+  "analysisRun": "api-gateway-599d9f4867-10-2",
+  "analysisFinishedUTC": "2026-10-14T20:29:00Z",
+  "analysisStatus": {
+    "completedAt": "2026-10-14T20:29:00Z",
+    "dryRunSummary": {},
+    "message": "Metric \"canary-p95-latency\" assessed Failed due to failed (1) > failureLimit (0)",
+    "metricResults": [
+      {
+        "consecutiveSuccess": 1,
+        "count": 1,
+        "measurements": [
+          {
+            "finishedAt": "2026-10-14T20:29:00Z",
+            "phase": "Successful",
+            "startedAt": "2026-10-14T20:29:00Z",
+            "value": "[0]"
+          }
+        ],
+        "metadata": {
+          "ResolvedPrometheusQuery": "(sum(rate(http_server_requests_total{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-599d9f4867-.*\",route!~\"/health|/metrics\",status=~\"5..\"}[1m]))\nor (sum(rate(http_server_requests_total{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-599d9f4867-.*\",route!~\"/health|/metrics\"}[1m])) * 0))\n/\nsum(rate(http_server_requests_total{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-599d9f4867-.*\",route!~\"/health|/metrics\"}[1m]))\n"
+        },
+        "name": "canary-error-rate",
+        "phase": "Successful",
+        "successful": 1
+      },
+      {
+        "count": 1,
+        "failed": 1,
+        "measurements": [
+          {
+            "finishedAt": "2026-10-14T20:29:00Z",
+            "phase": "Failed",
+            "startedAt": "2026-10-14T20:29:00Z",
+            "value": "[2.425]"
+          }
+        ],
+        "metadata": {
+          "ResolvedPrometheusQuery": "histogram_quantile(0.95,\n  sum by (le) (rate(http_server_request_duration_seconds_bucket{service=\"api-gateway\",rollout_track=\"canary\",pod=~\"api-gateway-599d9f4867-.*\",route!~\"/health|/metrics\"}[1m])))\n"
+        },
+        "name": "canary-p95-latency",
+        "phase": "Failed"
+      }
+    ],
+    "phase": "Failed",
+    "runSummary": {
+      "count": 2,
+      "failed": 1,
+      "successful": 1
+    },
+    "startedAt": "2026-10-14T20:28:15Z"
+  },
+  "abortObservedUTC": "2026-10-14T20:29:02.844583+00:00",
+  "stableRS": "fdd579dcc",
+  "stableResponseUTC": "2026-10-14T20:29:03.233201+00:00",
+  "stableResponseMilliseconds": 388.691
+}
