@@ -56,6 +56,7 @@ func main() {
 	)
 
 	// Proxy
+	app.Use(demoraDemostracion())
 	proxyHandler :=
 		handlers.NuevoProxyHandler()
 

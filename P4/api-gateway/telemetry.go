@@ -83,3 +83,20 @@ func registrarMetricas(service string) fiber.Handler {
 func endpointMetricas() fiber.Handler {
 	return adaptor.HTTPHandler(promhttp.Handler())
 }
+
+// La demora se activa solamente en la candidata de la demostracion P10.
+func demoraDemostracion() fiber.Handler {
+	delay, _ := strconv.Atoi(os.Getenv("P10_DEMO_DELAY_MS"))
+	if delay < 0 || delay > 2000 {
+		delay = 0
+	}
+	return func(c *fiber.Ctx) error {
+		if delay > 0 && c.Path() == "/orders/graphql" {
+			span := trace.SpanFromContext(c.UserContext())
+			span.SetAttributes(attribute.Int("p10.demo.delay_ms", delay))
+			log.Printf(`{"service":"api-gateway","event":"demo_delay","delay_ms":%d,"route":"/orders/graphql","trace_id":"%s"}`, delay, span.SpanContext().TraceID().String())
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+		}
+		return c.Next()
+	}
+}
