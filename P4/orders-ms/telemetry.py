@@ -30,6 +30,8 @@ BUSINESS_EVENTS = Counter(
     "Eventos de negocio procesados.",
     ["service", "event", "status"],
 )
+PAYMENTS_APPROVED = Counter("payments_approved_total", "Resultados de pago aprobado procesados.")
+PAYMENTS_REJECTED = Counter("payments_rejected_total", "Resultados de pago rechazado procesados.")
 
 
 def configure_telemetry(app: FastAPI, service: str) -> TracerProvider:
@@ -86,3 +88,7 @@ def configure_telemetry(app: FastAPI, service: str) -> TracerProvider:
 
 def record_business_event(service: str, event: str, status: str) -> None:
     BUSINESS_EVENTS.labels(service, event, status).inc()
+    if event == "payment_result" and status == "aprobado":
+        PAYMENTS_APPROVED.inc()
+    elif event == "payment_result" and status == "rechazado":
+        PAYMENTS_REJECTED.inc()

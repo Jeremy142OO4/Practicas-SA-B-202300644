@@ -115,7 +115,7 @@ async def actualizar_resultado_pago(
     except Exception:
         record_business_event("orders-ms", "payment_result", "error")
         raise
-    record_business_event("orders-ms", "payment_result", "success")
+    record_business_event("orders-ms", "payment_result", resultado.estado.lower())
     return respuesta
 
 
