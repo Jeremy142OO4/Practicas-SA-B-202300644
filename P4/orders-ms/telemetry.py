@@ -33,6 +33,8 @@ BUSINESS_EVENTS = Counter(
 
 
 def configure_telemetry(app: FastAPI, service: str) -> TracerProvider:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logging.getLogger(service).setLevel(logging.INFO)
     endpoint = os.getenv(
         "OTEL_EXPORTER_OTLP_ENDPOINT",
         "otel-collector.observability.svc.cluster.local:4317",

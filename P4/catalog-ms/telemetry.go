@@ -55,6 +55,7 @@ func iniciarTelemetria(ctx context.Context, service string) (func(context.Contex
 }
 
 func registrarMetricas(service string) fiber.Handler {
+    log.SetFlags(0)
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
 		err := c.Next()

@@ -114,15 +114,16 @@ jobs:
         run: |
           python - <<'PY'
           import os
+          import re
           from pathlib import Path
           path = Path('p10/platform/api-gateway-patch.yaml')
           text = path.read_text()
-          text = text.replace('sa-api-gateway:p10-v1.0.0', f'sa-api-gateway:{os.environ["VERSION"]}')
+          text = re.sub(r'sa-api-gateway:p10-[\w.-]+', f'sa-api-gateway:{os.environ["VERSION"]}', text)
           path.write_text(text)
           path = Path('p10/platform/workload-patch.yaml')
           text = path.read_text()
           for service in ('catalog-ms', 'orders-ms'):
-              text = text.replace(f'sa-{service}:p10-v1.0.0', f'sa-{service}:{os.environ["VERSION"]}')
+              text = re.sub(rf'sa-{service}:p10-[\w.-]+', f'sa-{service}:{os.environ["VERSION"]}', text)
           path.write_text(text)
           PY
       - name: Abrir PR GitOps
