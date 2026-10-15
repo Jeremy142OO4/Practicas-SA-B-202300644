@@ -74,13 +74,33 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Construir y publicar
+      - name: Construir imagen local
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          push: true
+          load: true
+          push: false
           tags: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+      - name: Bloquear imagen con vulnerabilidades criticas
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+          severity: CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+      - name: Generar SBOM de la imagen
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+          format: cyclonedx-json
+          output-file: sbom-${{ matrix.name }}-${{ inputs.version || github.ref_name }}.cdx.json
+          upload-artifact: true
+      - name: Publicar imagen aprobada
+        env:
+          IMAGE: ghcr.io/jeremy142oo4/sa-${{ matrix.name }}:${{ inputs.version || github.ref_name }}
+        run: docker push "$IMAGE"
       - name: Instalar Cosign
         uses: sigstore/cosign-installer@v3.7.0
       - name: Firmar imagen
