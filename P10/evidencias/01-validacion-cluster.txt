@@ -1,0 +1,29 @@
+VALIDACION P10 - 2026-10-14
+
+Contexto de kubectl:
+gke_sa-202300644_us-central1-a_p9- 202300644
+
+kubectl get nodes -o wide
+No resources found
+
+kubectl get applications -n argocd
+NAME                  SYNC STATUS   HEALTH STATUS
+p9-argo-rollouts      Synced        Healthy
+p9-external-secrets   Synced        Healthy
+p9-kyverno            Synced        Healthy
+p9-platform           Synced        Healthy
+p9-policies           Synced        Healthy
+p9-root               Synced        Healthy
+p9-secrets             Synced        Healthy
+p9-velero              Synced        Healthy
+
+kubectl get namespace observability
+Error from server (NotFound): namespaces "observability" not found
+
+kubectl get prometheusrules -A
+error: the server doesn't have a resource type "prometheusrules"
+
+Resultado:
+El cluster de la P9 esta sin nodos. No se aplicaron cambios ni se encendieron nodos.
+Las aplicaciones existentes de ArgoCD aparecen Synced y Healthy.
+Los recursos de observabilidad de P10 aun no estan desplegados en el cluster.

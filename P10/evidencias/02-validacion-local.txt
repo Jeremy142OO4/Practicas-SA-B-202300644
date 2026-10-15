@@ -1,0 +1,12 @@
+VALIDACION LOCAL P10 - 2026-10-14
+
+P4/api-gateway
+go test ./... -> correcto; paquetes sin archivos de prueba.
+
+P4/catalog-ms
+go test ./... -> correcto; paquetes sin archivos de prueba.
+
+P4/orders-ms
+La validacion de Python queda pendiente de ejecutarse en la laptop porque este equipo no tiene Python disponible.
+
+No se hicieron commits ni push.

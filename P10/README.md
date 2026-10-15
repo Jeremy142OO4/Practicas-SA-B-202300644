@@ -17,8 +17,11 @@ El gateway se recoge una sola vez por pod mediante PodMonitor; el analisis
 identifica la candidata por su hash, sin duplicar stable y canary.
 Las alertas llegan a Alertmanager y enlazan a su runbook.
 
-El flujo completo esta en [FLUJO.md](docs/FLUJO.md) y el
-[diagrama de telemetria](docs/DIAGRAMA.md).
+El recorrido completo se muestra en el [diagrama de telemetria](docs/DIAGRAMA.md).
+No todas las solicitudes recorren los tres servicios: una consulta directa
+al catalogo pasa solo por gateway y catalogo. El Collector recibe trazas;
+Prometheus recoge metricas mediante PodMonitor para el gateway y
+ServiceMonitor para pedidos y catalogo.
 
 ## Tabla de entrega - seccion 4.1
 
@@ -29,11 +32,11 @@ El flujo completo esta en [FLUJO.md](docs/FLUJO.md) y el
 | Servicios instrumentados | [api-gateway](../P4/api-gateway/telemetry.go), [orders-ms](../P4/orders-ms/telemetry.py) y [catalog-ms](../P4/catalog-ms/telemetry.go); namespace `sa-p9` |
 | AnalysisTemplate por metricas | `api-gateway-metrics`, [p10/platform/analysis-templates.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/platform/analysis-templates.yaml) |
 | Consultas del analisis | [Expresiones PromQL usadas](#consultas-del-analisis): errores HTTP menores a 5% y p95 menor a 500 ms |
-| SLO declarados | Disponibilidad 99% y 95% de solicitudes dentro de 500 ms; ambos con ventana de una hora. [Justificacion](docs/FLUJO.md#slo-y-presupuesto) |
+| SLO declarados | Disponibilidad 99% y 95% de solicitudes dentro de 500 ms; ambos con ventana de una hora. [Justificacion](#slo-y-alertas) |
 | Reglas de alerta | PrometheusRule `p10-slos`, [p10/rules/prometheus-rules.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/rules/prometheus-rules.yaml) |
 | Tablero | [JSON exportado de Grafana](dashboards/sa-platform.json), UID `p10-sa-platform`; [captura](evidencias/07-tablero.jpg) |
 | Reversion por metricas | AnalysisRun `api-gateway-f546c89c7-12-2` Failed; Rollout `api-gateway` en `sa-p9`. [Captura](evidencias/10-reversion.png) y [datos medidos](evidencias/09-incidente.json) |
-| Recorrido sintoma a causa | [Datos del recorrido](evidencias/09-incidente.json): 2.469 segundos desde alerta Firing hasta el log de la causa. [Informe](docs/INFORME_OPERACION.pdf) |
+| Recorrido sintoma a causa | [Datos del recorrido](evidencias/09-incidente.json): 2.469 segundos desde alerta Firing hasta el log de la causa. [Informe](docs/INFORME_OPERACION.md) |
 | Video demostrativo | Pendiente por decision del usuario; debe durar 5-8 minutos e incluir URL y minutaje por punto demostrado. |
 
 ## SLO y alertas
@@ -46,6 +49,10 @@ El flujo completo esta en [FLUJO.md](docs/FLUJO.md) y el
 La ventana de una hora permite evaluar una sesion del laboratorio. No se
 afirma cumplimiento de 30 dias. Las reglas usan `increase(...[1h])`;
 antes de completar una hora de muestras, el resultado es provisional.
+El 99% deja margen para fallas ocasionales sin normalizar una disponibilidad
+baja. Los 500 ms buscan una espera corta en las operaciones del carrito,
+permitiendo hasta 5% de solicitudes lentas. El indicador del SLO de latencia
+es la proporcion que cumple ese umbral; el p95 es una medicion adicional.
 Sin solicitudes de negocio, no se publica un porcentaje de cumplimiento;
 el tablero muestra Sin trafico / sin datos, nunca un 100% inventado.
 
@@ -126,9 +133,9 @@ con HTTP 200. No se presenta como compra exitosa ni se genero un pago.
 
 ![Reversion y recorrido medido](evidencias/10-reversion.png)
 
-El [informe de operacion](docs/INFORME_OPERACION.pdf) tiene dos paginas y los
-seis campos solicitados. Su [fuente Markdown](docs/INFORME_OPERACION.md)
-explica el ajuste de alerta realizado despues del primer ensayo.
+El [informe de operacion](docs/INFORME_OPERACION.md) contiene los seis campos
+solicitados y explica el ajuste de alerta realizado despues del primer ensayo.
+El limite del enunciado es de dos paginas al presentar el informe.
 
 | Evidencia | Que muestra |
 |---|---|
@@ -158,13 +165,11 @@ envia solicitudes secuenciales de baja frecuencia. No es una prueba de carga.
 
 ## Estado y costos
 
-La version desplegada es `p10-v1.0.5`. Su
-[workflow](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/actions/runs/38629630012)
-construyo y firmo las imagenes. El workflow actualizado incorpora ademas
-Trivy bloqueante ante vulnerabilidades criticas y SBOM CycloneDX de cada
-imagen antes de publicarla. Esos pasos nuevos aun requieren una ejecucion
-para acreditarse; no se atribuyen a la ejecucion historica enlazada. El
-[PR de promocion](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/pull/6)
+La version desplegada es `p10-v1.0.7`. Su
+[workflow](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/actions/runs/38768762632)
+aprobo Trivy, genero los SBOM CycloneDX y publico y verifico la firma de las
+tres imagenes. El
+[PR de promocion](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/pull/7)
 fue fusionado. ArgoCD aplica GitOps y Kyverno conserva la admision.
 La aplicacion `p9-platform` apunta a `p10/platform`, sin otro controlador
 de ArgoCD administrando los mismos microservicios.
