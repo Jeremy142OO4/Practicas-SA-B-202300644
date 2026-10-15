@@ -57,7 +57,8 @@ bootstrap.sh
 
 ## Resultado comprobado
 
-- ArgoCD: todas las aplicaciones `Synced/Healthy`.
+- ArgoCD: plataforma y aplicaciones de P10 `Synced/Healthy`; Kyverno
+  sincronizado, con su controlador de reportes reiniciandose en la ultima revision.
 - Backup `p9-verificacion`: `Completed`, 141/141 recursos.
 - Restore `p9-verificacion`: `Completed`, 3/3 recursos seleccionados.
 - PVC restaurado: `Bound`.
@@ -70,6 +71,12 @@ bootstrap.sh
 Los datos del verificador estan en [p9.conf](p9.conf). Los scripts del auxiliar
 no se modifican. La documentacion no afirma una reconstruccion completa ni
 alta disponibilidad de PostgreSQL o RabbitMQ.
+
+El [verificador original](evidencias/verificador-original.txt), sin modificaciones,
+dio 43/60. Sus comprobaciones de Velero y Restore fallan al procesar JSON
+([explicacion y comandos independientes](docs/RUNBOOK.md#9-verificador-original)).
+La penalizacion por cargas con una sola replica si corresponde a la configuracion
+actual. Estos resultados no se presentan como una calificacion aprobada.
 
 ## Video demostrativo
 

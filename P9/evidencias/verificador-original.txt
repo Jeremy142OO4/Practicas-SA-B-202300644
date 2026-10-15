@@ -1,0 +1,100 @@
+================================================================
+ VERIFICACION PRACTICA 9 - v1.0
+ Carnet: 202300644        Fecha: 2026-10-15 17:28
+ Hash del script: 367900de0c69946a
+================================================================
+
+--- 0. Herramientas y contexto (debe verificarlo el auxiliar)
+  [OK]    Todas las herramientas presentes
+  Contexto de kubectl: gke_sa-202300644_us-central1-a_p9-202300644
+  [OK]    Acceso al cluster confirmado
+
+--- 1. Repositorios
+  [OK]    Repositorio de codigo accesible
+  [OK]    Repositorio GitOps accesible
+  [OK]    Carpeta /P9 presente
+  [OK]    README de entrega presente
+
+--- 2.1 Bootstrap automatizado desde cero (14 pts)
+  [OK]    Punto de entrada presente: P9/scripts/bootstrap.sh
+  Pasos automatizados detectados en el bootstrap: 16
+  [OK]    Terraform instala ArgoCD (capa de plataforma)
+  Aplicaciones registradas en ArgoCD: 12
+  Aplicacion raiz 'p9-root': sync=Synced  aplicaciones hijas=7
+  [OK]    Patron app-of-apps operativo
+  [OK]    Aplicacion raiz sincronizada
+  >> 2.1 = 14 / 14
+
+--- 2.2 Estado remoto y disciplina de IaC (8 pts)
+  [OK]    Backend remoto declarado: backend "gcs"
+  [OK]    Se evidencia bloqueo de estado
+  [OK]    Sin archivos de estado en el repositorio
+  [OK]    Sin credenciales evidentes en el codigo
+  >> 2.2 = 8 / 8
+
+--- 2.3 Respaldo y restauracion con Velero (14 pts)
+  [OK]    Velero instalado en el namespace velero
+verificar_p9.sh: línea 175: [: 1
+0: se esperaba un entero
+  [FALLA] Sin respaldos programados: solo respaldos manuales
+verificar_p9.sh: línea 186: [: 6
+0: se esperaba un entero
+  [FALLA] Ningun respaldo completado
+  destino: provider=gcp bucket=sa-202300644-p9-202300644-velero estado=Available
+  [FALLA] Destino de respaldo no configurado o interno al cluster
+  [FALLA] Los respaldos NO incluyen volumenes: se respalda solo la definicion
+  >> 2.3 = 2 / 14
+
+--- 2.4 Continuidad de los secretos (8 pts)
+  [OK]    Mecanismo de secretos: ExternalSecrets
+  [OK]    ClusterSecretStore activo: la llave vive fuera del cluster
+  [OK]    ExternalSecret sincronizado correctamente
+  >> 2.4 = 8 / 8
+
+--- 2.5 Resiliencia ante perdida de nodo (8 pts)
+  [OK]    PodDisruptionBudget definido (3)
+  pdb=api-gateway minAvailable=1 maxUnavailable=- saludables=2
+  pdb=catalog-ms minAvailable=1 maxUnavailable=- saludables=2
+  pdb=orders-ms minAvailable=1 maxUnavailable=- saludables=2
+  [OK]    Anti-afinidad o distribucion topologica declarada
+  Replicas minimas entre las cargas de trabajo: 1
+  [FALLA] Existe al menos una carga de trabajo con una sola replica
+  >> 2.5 = 6 / 8
+
+--- 2.6 Restauracion de datos verificada (8 pts)
+  [OK]    PVC 'data-orders-db-0' presente (fase=Bound)
+verificar_p9.sh: línea 264: [: 1
+0: se esperaba un entero
+  [FALLA] Nunca se ha ejecutado una restauracion: el respaldo no esta probado
+  [OK]    Evidencia de verificacion de datos presente en el repositorio
+  >> 2.6 = 5 / 8
+
+--- Comprobaciones informativas
+  [OK]    Runbook presente en el repositorio
+  [OK]    El informe declara RTO y RPO
+3m55s       Normal    Pulled                   pod/orders-ms-5b49cb775f-2xn8v           Container image "ghcr.io/jeremy142oo4/sa-orders-ms:p10-v1.0.7" already present on machine and can be accessed by the pod
+3m53s       Normal    Started                  pod/orders-ms-5b49cb775f-2xn8v           Container started
+3m41s       Warning   Unhealthy                pod/orders-ms-5b49cb775f-2xn8v           Readiness probe failed: Get "http://10.7.2.21:4003/health": dial tcp 10.7.2.21:4003: connect: connection refused
+3m31s       Warning   Unhealthy                pod/orders-ms-5b49cb775f-dtfd8           Readiness probe failed: Get "http://10.7.0.31:4003/health": dial tcp 10.7.0.31:4003: connect: connection refused
+2m51s       Warning   Unhealthy                pod/orders-db-0                          Readiness probe failed: command timed out: "sh -c pg_isready -U p9user -d orders_db" timed out after 1s
+
+================================================================
+ RESUMEN - carnet 202300644
+================================================================
+  2.1 Bootstrap automatizado ....... 14 / 14
+  2.2 Estado remoto e IaC ..........  8 / 8
+  2.3 Respaldo con Velero ..........  2 / 14
+  2.4 Continuidad de secretos ......  8 / 8
+  2.5 Resiliencia ante fallo .......  6 / 8
+  2.6 Restauracion verificada ......  5 / 8
+  --------------------------------------------
+  CONOCIMIENTO ..................... 43 / 60
+
+  Pendiente de evaluacion presencial: 40 pts
+    1.1 Runbook (12)   1.2 Informe de DR (12)
+    1.3 Diagrama del bootstrap (6)   1.4 Preguntas teoricas (10)
+
+  REQUISITOS ELIMINATORIOS INCUMPLIDOS: sin-respaldo
+
+  Duracion: 8s    Reporte: reporte_p9_202300644.txt
+================================================================
