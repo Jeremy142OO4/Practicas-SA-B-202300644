@@ -1,0 +1,19 @@
+Inicio UTC: 2026-10-15T23:20:43.447067+00:00
+Nodo: gke-p9-202300644-default-pool-04ae1232-w28z pod inicial: orders-ms-6c4858999f-b5bnx
+Alcance: solo pedidos; los demas pods del nodo no se desalojan
+node/gke-p9-202300644-default-pool-04ae1232-w28z cordoned
+node/gke-p9-202300644-default-pool-04ae1232-w28z already cordoned
+evicting pod sa-p9/orders-ms-6c4858999f-b5bnx
+pod/orders-ms-6c4858999f-b5bnx evicted
+node/gke-p9-202300644-default-pool-04ae1232-w28z drained
+Nuevos pods: [('orders-ms-6c4858999f-srzc9', 'gke-p9-202300644-default-pool-04ae1232-tr5w'), ('orders-ms-6c4858999f-w567w', 'gke-p9-202300644-default-pool-04ae1232-c2hn')]
+Fin UTC: 2026-10-15T23:21:34.785281+00:00
+Consultas: 30 correctas: 22 fallidas: 8
+node/gke-p9-202300644-default-pool-04ae1232-w28z uncordoned
+Traceback (most recent call last):
+  File "/home/jeremy/Escritorio/SA/Practicas-SA-B-202300644/P9/scripts/probar_nodo.py", line 96, in <module>
+    main()
+    ~~~~^^
+  File "/home/jeremy/Escritorio/SA/Practicas-SA-B-202300644/P9/scripts/probar_nodo.py", line 83, in main
+    raise RuntimeError("Hubo solicitudes fallidas; se conserva el resultado real")
+RuntimeError: Hubo solicitudes fallidas; se conserva el resultado real

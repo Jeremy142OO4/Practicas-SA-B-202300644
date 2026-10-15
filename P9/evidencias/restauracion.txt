@@ -1,0 +1,58 @@
+Inicio UTC: 2026-10-15T23:04:51Z
+Dato de prueba: p9-verificacion|dato-recuperado-20261015T230448Z
+INSERT 0 1
+p9-verificacion|dato-recuperado-20261015T230448Z
+backup.velero.io/p9-verificacion created
+2026-10-15T23:04:55Z backup p9-verificacion: 
+2026-10-15T23:05:11Z backup p9-verificacion: InProgress
+2026-10-15T23:05:26Z backup p9-verificacion: InProgress
+2026-10-15T23:05:41Z backup p9-verificacion: Completed
+{
+  "name": "p9-verificacion",
+  "phase": "Completed",
+  "start": "2026-10-15T23:04:56Z",
+  "end": "2026-10-15T23:05:31Z",
+  "progress": {
+    "itemsBackedUp": 141,
+    "totalItems": 141
+  }
+}
+Perdida del dato de prueba UTC: 2026-10-15T23:05:42Z
+DELETE 1
+Marcador ausente en la base activa: confirmado
+namespace/sa-p9-restored created
+secret/orders-ms-secrets created
+configmap/orders-db-init created
+Inicio restauracion UTC: 2026-10-15T23:05:47Z
+restore.velero.io/p9-verificacion created
+2026-10-15T23:05:48Z restore p9-verificacion: InProgress
+2026-10-15T23:06:03Z restore p9-verificacion: InProgress
+2026-10-15T23:06:19Z restore p9-verificacion: InProgress
+2026-10-15T23:06:34Z restore p9-verificacion: Completed
+pod/orders-db-0 condition met
+Verificacion UTC: 2026-10-15T23:06:37Z
+Dato recuperado: p9-verificacion|dato-recuperado-20261015T230448Z
+RTO de restauracion aislada hasta verificar dato: 50 segundos
+RPO para el marcador respaldado: 0 datos perdidos
+PV origen: pvc-01ca39f6-f224-4645-98ed-11a148ee67d1
+PV recuperado: pvc-0a0b45d6-ff1f-4840-8ee9-52aa706becbc
+{
+  "name": "p9-verificacion",
+  "phase": "Completed",
+  "backup": "p9-verificacion",
+  "start": "2026-10-15T23:05:47Z",
+  "end": "2026-10-15T23:06:29Z",
+  "progress": {
+    "itemsRestored": 3,
+    "totalItems": 3
+  },
+  "warnings": null,
+  "errors": null
+}
+NAME              READY   STATUS    RESTARTS   AGE
+pod/orders-db-0   1/1     Running   0          47s
+
+NAME                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-orders-db-0   Bound    pvc-0a0b45d6-ff1f-4840-8ee9-52aa706becbc   10Gi       RWO            standard-rwo   <unset>                 48s
+Prueba completada. Se conserva el Restore en velero.
+El namespace aislado puede eliminarse despues de guardar esta evidencia.

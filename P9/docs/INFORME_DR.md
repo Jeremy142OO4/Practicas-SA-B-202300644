@@ -1,51 +1,66 @@
 # Informe de recuperacion ante desastre
 
-## 1. Incidente
+## 1. Objetivos declarados
 
-Se probo la recuperacion de P9 en un namespace separado. No se destruyo el
-namespace activo `sa-p9`; de esta forma la prueba no interrumpio la aplicacion.
+Para una futura prueba completa se proponen RTO de hasta 30 minutos y RPO
+de hasta seis horas, acorde con la frecuencia de los respaldos. Estos objetivos
+no quedaron registrados antes de los ensayos descritos abajo; no se presentan
+como metas ya demostradas ni como tiempos de reconstruccion del cluster.
 
-## 2. Deteccion
+## 2. Escenario ejecutado
 
-Se comprobo el estado del cluster con `kubectl get nodes` y el estado de las
-aplicaciones con `kubectl get applications -n argocd`.
+El 15 de octubre de 2026 se inserto un marcador nuevo en PostgreSQL, se hizo
+un backup y se elimino solamente esa fila de prueba de la base activa. Luego
+se restauro en `sa-p9-restored`, con un volumen diferente. El marcador no
+estaba en el script de inicializacion. No se elimino el namespace activo.
 
-## 3. Acciones tomadas
+Tambien se bloqueo temporalmente la programacion en un nodo y se desalojaron
+solo sus pods de pedidos, mientras se consultaba el gateway. Esta prueba
+comprueba reprogramacion selectiva, no la perdida de una maquina completa.
 
-1. Se creo el respaldo Velero `p9-manual` en el bucket externo de GCS.
-2. El respaldo termino en `Completed` con 208 de 208 recursos.
-3. Se creo `p9-prueba` desde ese respaldo y se uso el mapeo
-   `sa-p9:sa-p9-restored`.
-4. Velero recupero el PVC de PostgreSQL mediante Kopia.
-5. Se verifico el dato `p9-inicial|dato-real-de-prueba` en la base restaurada.
-6. Se elimino el namespace temporal y el cluster regreso a 2 nodos.
+## 3. Tiempos medidos
 
-## 4. Resultado
+Todos los horarios siguientes son UTC, del 15 de octubre de 2026.
 
-Al finalizar:
-
-- ArgoCD: todas las aplicaciones `Synced` y `Healthy`.
-- Aplicacion: API Gateway, RabbitMQ, PostgreSQL y las 2 replicas de
-  `orders-ms` en `Running/Ready`.
-- Backup: `p9-manual`, `Completed`, 208/208 recursos.
-- Restore: `p9-prueba`, `Completed`, 86/86 recursos y PVC `Bound`.
-- Dato validado: `p9-inicial|dato-real-de-prueba`.
-
-## 5. RTO y RPO observados
-
-| Medicion | Resultado |
+| Evento | Hora o resultado |
 |---|---|
-| Inicio del restore aislado | 2026-09-23 17:20:44 UTC |
-| Restore completado | 2026-09-23 17:32:59 UTC |
-| RTO de la prueba aislada | 12 min 15 s |
-| Backup valido | 2026-09-23 17:18:02 UTC |
-| RPO observado | 0 perdida del dato de prueba |
+| Backup completado | 23:05:31; 141/141 recursos |
+| Eliminacion de la fila de prueba | 23:05:42 |
+| Inicio del restore | 23:05:47 |
+| Restore completado | 23:06:29; 3/3 recursos seleccionados |
+| Dato recuperado verificado | 23:06:37 |
+| Recuperacion aislada | 50 s desde el inicio del restore; 55 s desde la eliminacion |
+| Segunda prueba de reprogramacion | 23:24:19 a 23:25:10; aproximadamente 52 s |
 
-Este RTO corresponde a la restauracion aislada. No se presenta como el RTO
-de una destruccion completa del cluster porque esa medicion no se ejecuto.
+La primera prueba de reprogramacion tuvo 22 consultas correctas de 30.
+Se agregaron 15 segundos de espera antes de terminar pedidos y un plazo
+de terminacion de 45 segundos. Al repetirla, las 30 consultas fueron
+correctas y las dos replicas quedaron listas en nodos distintos. En ambos
+casos el nodo volvio a quedar habilitado.
 
-## 6. Lecciones aprendidas
+## 4. Perdida medida
 
-El estado remoto de Terraform, el bucket externo de Velero y Secret Manager
-permiten reconstruir la plataforma sin depender de los recursos temporales del
-cluster. Antes de destruir un cluster se debe confirmar un backup `Completed`.
+Se recupero `p9-verificacion|dato-recuperado-20261015T230448Z` desde el backup.
+No hubo perdida del marcador respaldado. Esto verifica ese dato concreto,
+no garantiza RPO cero para todas las operaciones posteriores al respaldo.
+
+## 5. Puntos unicos de fallo detectados
+
+PostgreSQL y RabbitMQ tienen una sola instancia. No se afirma alta
+disponibilidad de esos componentes. El primer ensayo tambien mostro errores
+durante el reemplazo de pedidos; el segundo no los reprodujo despues del
+ajuste de terminacion. Las capturas historicas de observabilidad dependen
+de su retencion y almacenamiento.
+
+## 6. Brecha y plan
+
+Falta medir una destruccion y reconstruccion completa y una perdida de nodo
+completa. No se ejecutaron porque el cluster tambien sirve a P10. Deben
+programarse en un entorno separado o en una ventana autorizada, declarando
+antes los objetivos y verificando un backup utilizable. Replicar bases y
+mensajeria exige configurar su replicacion; aumentar replicas sin ella no
+resuelve el problema.
+
+Registros reales: [restauracion](../evidencias/restauracion.txt),
+[primer ensayo con errores](../evidencias/reprogramacion-inicial.txt) y
+[segundo ensayo correcto](../evidencias/reprogramacion.txt).

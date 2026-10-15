@@ -7,5 +7,9 @@ terraform.tfvars
 *.tfvars.json
 evidencias/*.log
 evidencias/*.txt
+!evidencias/restauracion.txt
+!evidencias/reprogramacion.txt
+!evidencias/reprogramacion-inicial.txt
+!evidencias/verificador-original.txt
 tmp/
 

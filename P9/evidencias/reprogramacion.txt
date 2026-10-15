@@ -1,0 +1,12 @@
+Inicio UTC: 2026-10-15T23:24:19.042106+00:00
+Nodo: gke-p9-202300644-default-pool-04ae1232-j5cg pod inicial: orders-ms-5b49cb775f-dtfd8
+Alcance: solo pedidos; los demas pods del nodo no se desalojan
+node/gke-p9-202300644-default-pool-04ae1232-j5cg cordoned
+node/gke-p9-202300644-default-pool-04ae1232-j5cg already cordoned
+evicting pod sa-p9/orders-ms-5b49cb775f-dtfd8
+pod/orders-ms-5b49cb775f-dtfd8 evicted
+node/gke-p9-202300644-default-pool-04ae1232-j5cg drained
+Nuevos pods: [('orders-ms-5b49cb775f-2xn8v', 'gke-p9-202300644-default-pool-04ae1232-tr5w'), ('orders-ms-5b49cb775f-qzfw8', 'gke-p9-202300644-default-pool-04ae1232-w28z')]
+Fin UTC: 2026-10-15T23:25:10.827431+00:00
+Consultas: 30 correctas: 30 fallidas: 0
+node/gke-p9-202300644-default-pool-04ae1232-j5cg uncordoned
