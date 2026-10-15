@@ -10,7 +10,20 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "noValue": "Sin trafico / sin datos",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin trafico / sin datos",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -26,7 +39,7 @@
         "graphMode": "none",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -40,7 +53,9 @@
           },
           "expr": "slo:api_availability:ratio",
           "legendFormat": "{{service}}{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Disponibilidad - ultima hora",
@@ -55,7 +70,20 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "unit": "s"
+          "unit": "s",
+          "noValue": "Sin trafico / sin datos",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin trafico / sin datos",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -71,7 +99,7 @@
         "graphMode": "none",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -85,7 +113,9 @@
           },
           "expr": "histogram_quantile(0.95,sum by (le)(rate(http_server_request_duration_seconds_bucket{service=\"api-gateway\",route!~\"/health|/metrics\"}[1m])))",
           "legendFormat": "{{service}}{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Latencia p95",
@@ -100,7 +130,20 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "noValue": "Sin trafico / sin datos",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin trafico / sin datos",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -116,7 +159,7 @@
         "graphMode": "none",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -130,7 +173,9 @@
           },
           "expr": "slo:api_availability:error_budget:ratio",
           "legendFormat": "{{service}}{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Presupuesto disponibilidad consumido",
@@ -145,7 +190,20 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "noValue": "Sin trafico / sin datos",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin trafico / sin datos",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -161,7 +219,7 @@
         "graphMode": "none",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -175,7 +233,9 @@
           },
           "expr": "slo:api_latency:error_budget:ratio",
           "legendFormat": "{{service}}{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Presupuesto latencia consumido",
@@ -350,7 +410,20 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Sin trafico / sin datos",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin trafico / sin datos",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -366,7 +439,7 @@
         "graphMode": "none",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -380,7 +453,9 @@
           },
           "expr": "sum(payments_approved_total)",
           "legendFormat": "{{service}}{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Resultados de pagos aprobados",
@@ -395,7 +470,20 @@
       "fieldConfig": {
         "defaults": {
           "decimals": 2,
-          "unit": "short"
+          "unit": "short",
+          "noValue": "Sin trafico / sin datos",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Sin trafico / sin datos",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -411,7 +499,7 @@
         "graphMode": "none",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ],
           "fields": "",
           "values": false
@@ -425,7 +513,9 @@
           },
           "expr": "sum(payments_rejected_total)",
           "legendFormat": "{{service}}{{pod}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Resultados de pagos rechazados",
@@ -448,5 +538,5 @@
   },
   "title": "SA Platform - P10",
   "uid": "p10-sa-platform",
-  "version": 1
+  "version": 2
 }

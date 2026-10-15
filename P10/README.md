@@ -13,6 +13,8 @@ Los tres servicios propagan `traceparent` y registran el mismo `trace_id`.
 Prometheus recoge /metrics. OpenTelemetry Collector envia trazas a Tempo.
 Alloy envia logs a Loki. Grafana consulta esos tres almacenes.
 Argo Rollouts consulta Prometheus para decidir la promocion.
+El gateway se recoge una sola vez por pod mediante PodMonitor; el analisis
+identifica la candidata por su hash, sin duplicar stable y canary.
 Las alertas llegan a Alertmanager y enlazan a su runbook.
 
 El flujo completo esta en [FLUJO.md](docs/FLUJO.md) y el
@@ -44,6 +46,8 @@ El flujo completo esta en [FLUJO.md](docs/FLUJO.md) y el
 La ventana de una hora permite evaluar una sesion del laboratorio. No se
 afirma cumplimiento de 30 dias. Las reglas usan `increase(...[1h])`;
 antes de completar una hora de muestras, el resultado es provisional.
+Sin solicitudes de negocio, no se publica un porcentaje de cumplimiento;
+el tablero muestra Sin trafico / sin datos, nunca un 100% inventado.
 
 El presupuesto consumido es la proporcion de solicitudes malas dividida entre
 el presupuesto permitido. Un valor de 1 significa 100% consumido.
@@ -156,7 +160,10 @@ envia solicitudes secuenciales de baja frecuencia. No es una prueba de carga.
 
 La version desplegada es `p10-v1.0.5`. Su
 [workflow](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644/actions/runs/38629630012)
-construyo y firmo las imagenes. El
+construyo y firmo las imagenes. El workflow actualizado incorpora ademas
+Trivy bloqueante ante vulnerabilidades criticas y SBOM CycloneDX de cada
+imagen antes de publicarla. Esos pasos nuevos aun requieren una ejecucion
+para acreditarse; no se atribuyen a la ejecucion historica enlazada. El
 [PR de promocion](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/pull/6)
 fue fusionado. ArgoCD aplica GitOps y Kyverno conserva la admision.
 La aplicacion `p9-platform` apunta a `p10/platform`, sin otro controlador
