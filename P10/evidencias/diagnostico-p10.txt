@@ -1,0 +1,218 @@
+Fecha UTC: 2026-10-15T23:16:32Z
+NAME                  SYNC STATUS   HEALTH STATUS
+p10-metrics           Synced        Healthy
+p10-observability     Synced        Healthy
+p10-root              Synced        Healthy
+p10-rules             Synced        Healthy
+p9-argo-rollouts      Synced        Healthy
+p9-external-secrets   Synced        Healthy
+p9-kyverno            Synced        Healthy
+p9-platform           Synced        Healthy
+p9-policies           Synced        Healthy
+p9-root               Synced        Healthy
+p9-secrets            Synced        Healthy
+p9-velero             Synced        Healthy
+Targets del gateway: una recoleccion por pod, todos saludables:
+true
+Reglas de P10 evaluandose sin errores:
+true
+{
+  "phase": "Healthy",
+  "replicas": 2,
+  "ready": 2,
+  "hash": "578d5cb48",
+  "image": "ghcr.io/jeremy142oo4/sa-api-gateway:p10-v1.0.7"
+}
+Proveedores reales del AnalysisTemplate:
+true
+Promocion condicionada al analisis:
+true
+Consultas completas con hash real: 578d5cb48
+canary-error-rate
+true
+[
+  {
+    "metric": {},
+    "value": [
+      1792106196.597,
+      "0"
+    ]
+  }
+]
+canary-p95-latency
+true
+[
+  {
+    "metric": {},
+    "value": [
+      1792106197.258,
+      "0.02317857142857143"
+    ]
+  }
+]
+SLI y presupuesto con solicitudes recientes:
+slo:api_availability:ratio
+true
+[
+  {
+    "metric": {
+      "__name__": "slo:api_availability:ratio"
+    },
+    "value": [
+      1792106197.869,
+      "1"
+    ]
+  }
+]
+slo:api_latency:ratio
+true
+[
+  {
+    "metric": {
+      "__name__": "slo:api_latency:ratio"
+    },
+    "value": [
+      1792106198.472,
+      "0.995729325100188"
+    ]
+  }
+]
+slo:api_availability:error_budget:ratio
+true
+[
+  {
+    "metric": {
+      "__name__": "slo:api_availability:error_budget:ratio"
+    },
+    "value": [
+      1792106199.097,
+      "0"
+    ]
+  }
+]
+slo:api_latency:error_budget:ratio
+true
+[
+  {
+    "metric": {
+      "__name__": "slo:api_latency:error_budget:ratio"
+    },
+    "value": [
+      1792106199.703,
+      "0.08541349799624065"
+    ]
+  }
+]
+payments_approved_total
+true
+[
+  {
+    "metric": {
+      "__name__": "payments_approved_total",
+      "container": "orders-ms",
+      "endpoint": "http",
+      "instance": "10.7.3.43:4003",
+      "job": "orders-ms",
+      "namespace": "sa-p9",
+      "pod": "orders-ms-6c4858999f-b5bnx",
+      "service": "orders-ms"
+    },
+    "value": [
+      1792106200.301,
+      "0"
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "payments_approved_total",
+      "container": "orders-ms",
+      "endpoint": "http",
+      "instance": "10.7.2.18:4003",
+      "job": "orders-ms",
+      "namespace": "sa-p9",
+      "pod": "orders-ms-6c4858999f-srzc9",
+      "service": "orders-ms"
+    },
+    "value": [
+      1792106200.301,
+      "0"
+    ]
+  }
+]
+payments_rejected_total
+true
+[
+  {
+    "metric": {
+      "__name__": "payments_rejected_total",
+      "container": "orders-ms",
+      "endpoint": "http",
+      "instance": "10.7.3.43:4003",
+      "job": "orders-ms",
+      "namespace": "sa-p9",
+      "pod": "orders-ms-6c4858999f-b5bnx",
+      "service": "orders-ms"
+    },
+    "value": [
+      1792106200.912,
+      "0"
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "payments_rejected_total",
+      "container": "orders-ms",
+      "endpoint": "http",
+      "instance": "10.7.2.18:4003",
+      "job": "orders-ms",
+      "namespace": "sa-p9",
+      "pod": "orders-ms-6c4858999f-srzc9",
+      "service": "orders-ms"
+    },
+    "value": [
+      1792106200.912,
+      "0"
+    ]
+  }
+]
+Reglas propias y runbooks:
+{
+  "registros": [
+    "slo:api_availability:ratio",
+    "slo:api_latency:ratio",
+    "slo:api_availability:error_budget:ratio",
+    "slo:api_latency:error_budget:ratio",
+    "slo:api_availability:burn_rate_1m",
+    "slo:api_latency:burn_rate_1m",
+    "slo:api_availability:burn_rate_5m",
+    "slo:api_latency:burn_rate_5m",
+    "slo:gateway_pod_latency:burn_rate_1m",
+    "slo:gateway_pod_latency:burn_rate_5m"
+  ],
+  "alertas": [
+    {
+      "alert": "ApiAvailabilityErrorBudgetBurn",
+      "expr": "(slo:api_availability:burn_rate_1m > 2)\nand (slo:api_availability:burn_rate_5m > 2)\nand (sum(increase(http_server_requests_total{service=\"api-gateway\",route!~\"/health|/metrics\"}[5m])) >= 2)\n",
+      "runbook": "https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/docs/RUNBOOK.md#disponibilidad"
+    },
+    {
+      "alert": "ApiLatencyErrorBudgetBurn",
+      "expr": "(slo:api_latency:burn_rate_1m > 2)\nand (slo:api_latency:burn_rate_5m > 2)\nand (sum(increase(http_server_requests_total{service=\"api-gateway\",route!~\"/health|/metrics\"}[5m])) >= 2)\nor\n((slo:gateway_pod_latency:burn_rate_1m > 2)\nand (slo:gateway_pod_latency:burn_rate_5m > 2)\nand (sum by (pod) (increase(http_server_requests_total{service=\"api-gateway\",route!~\"/health|/metrics\"}[5m])) >= 2))\n",
+      "runbook": "https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/docs/RUNBOOK.md#latencia"
+    }
+  ]
+}
+Fuentes configuradas de Grafana (sin imprimir credenciales):
+Fuentes: alertmanager, loki, prometheus, tempo
+Analisis recientes y evidencia de aborto:
+NAME                          STATUS       AGE
+api-gateway-599d9f4867-10-2   Failed       26h
+api-gateway-f546c89c7-12-2    Failed       26h
+api-gateway-5657f7d579-14-4   Successful   6h36m
+api-gateway-5657f7d579-14-6   Successful   6h35m
+api-gateway-578d5cb48-15-2    Successful   6m55s
+api-gateway-578d5cb48-15-4    Successful   5m39s
+api-gateway-578d5cb48-15-6    Successful   4m10s
+Registro JSON y trace_id:
+true
+Fin del diagnostico independiente. Este resultado no modifica una nota.

@@ -3,6 +3,55 @@
 Los comandos se ejecutan en Cloud Shell o en la laptop con acceso al cluster.
 No necesitan el plugin de Argo Rollouts.
 
+## Antes de ejecutar el verificador
+
+Usar los nombres de [p10.conf](../p10.conf). El archivo no contiene secretos.
+El verificador original se descarga sin editar desde la fuente del auxiliar.
+
+El SLO necesita solicitudes de negocio recientes. Desde la raiz de la copia
+del repositorio en la laptop, abrir una terminal y ejecutar:
+
+```bash
+python3 P10/scripts/preparar_demo.py --segundos 600
+```
+
+Son consultas de lectura, una por servicio stable/canary cada tres segundos,
+no una prueba de carga. No crean pedidos ni pagos y finalizan por si solas.
+Esperar al menos un minuto de recoleccion antes de revisar el SLI. Ctrl+C
+detiene el proceso y cierra sus accesos locales. No dejar trafico permanente
+para disimular la ausencia de usuarios.
+
+En otra terminal se puede comprobar el sistema sin modificar recursos:
+
+```bash
+bash P10/scripts/diagnostico_p10.sh
+```
+
+Este diagnostico no sustituye al script ni calcula una nota.
+
+### Limitaciones del verificador recibido
+
+La copia con SHA-256
+`0f423f0112af77678177bc461dd035b065783e0136bffa3a5b35143ef30616f3`
+se ejecuto sin modificaciones. El [reporte original](../evidencias/verificador-original.txt)
+conserva su salida. Se detectaron estos problemas reproducibles:
+
+- `${VAR:-{}}` agrega una llave extra al JSON cuando la variable tiene valor.
+  jq procesa parte del contenido pero termina con error de parseo. Los
+  contadores pueden quedar como dos numeros en lugar de un entero.
+- `jq -e '.spec.strategy.canary.steps[]?.analysis'` usa el ultimo resultado:
+  la pausa final no tiene analysis y produce un falso negativo. La condicion
+  existencial correcta se comprueba con `any` en el diagnostico independiente.
+- `mapfile` separa las consultas PromQL por saltos de linea, no por metrica.
+  Ademas sustituye el hash candidato por 1, que no corresponde a ningun pod.
+- Con `pipefail`, `echo "$DS" | grep -q ...` puede terminar en SIGPIPE (141)
+  para ConfigMaps grandes, incluso cuando el tipo de fuente existe.
+- Las reglas de registro no tienen necesariamente annotations. Aplicar
+  with_entries a annotations=null falla aunque las alertas tengan runbook.
+
+Estos puntos requieren revision del auxiliar; no se alteran sus scripts,
+los estados del cluster ni las consultas para fabricar una aprobacion.
+
 ## Preparar las consultas
 
 ```bash

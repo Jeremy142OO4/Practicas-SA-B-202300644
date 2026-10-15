@@ -27,7 +27,7 @@ ServiceMonitor para pedidos y catalogo.
 
 | Item | Enlace o dato |
 |---|---|
-| Repositorio de codigo | [Practicas-SA-B-202300644](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644). Sigue privado por decision del usuario; su acceso publico queda pendiente. |
+| Repositorio de codigo | [Practicas-SA-B-202300644](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644), publico |
 | Repositorio GitOps | [Practicas-SA-B-202300644-gitops](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops), publico |
 | Servicios instrumentados | [api-gateway](../P4/api-gateway/telemetry.go), [orders-ms](../P4/orders-ms/telemetry.py) y [catalog-ms](../P4/catalog-ms/telemetry.go); namespace `sa-p9` |
 | AnalysisTemplate por metricas | `api-gateway-metrics`, [p10/platform/analysis-templates.yaml](https://github.com/Jeremy142OO4/Practicas-SA-B-202300644-gitops/blob/main/p10/platform/analysis-templates.yaml) |
@@ -60,7 +60,7 @@ El presupuesto consumido es la proporcion de solicitudes malas dividida entre
 el presupuesto permitido. Un valor de 1 significa 100% consumido.
 La velocidad de consumo se calcula en ventanas de 1 y 5 minutos.
 Las alertas exigen consumo mayor a 2 veces el permitido durante 30 segundos,
-con al menos dos solicitudes. La latencia tambien se revisa por pod candidato
+con al menos dos solicitudes. La latencia tambien se revisa por pod del gateway
 para que stable no oculte el problema.
 
 Se excluyen /health y /metrics de estos indicadores. Un error GraphQL con
@@ -77,24 +77,24 @@ La alerta instantanea redundante del canary se retiro.
 
 ## Consultas del analisis
 
-Estas son las consultas resueltas del AnalysisRun fallido. El manifiesto usa
-`{{args.podHash}}`, que Argo reemplaza por el hash de la candidata. Se miden
+Estas son las consultas actuales del AnalysisTemplate. Argo reemplaza
+`{{args.podHash}}` por el hash real de la candidata. Se miden
 solicitudes reales de negocio, no el resultado de un Job de pruebas.
 
 Errores HTTP de la candidata; debe ser menor a 0.05:
 
 ```promql
-(sum(rate(http_server_requests_total{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics",status=~"5.."}[1m]))
-or (sum(rate(http_server_requests_total{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics"}[1m])) * 0))
+(sum(rate(http_server_requests_total{service="api-gateway",pod=~"api-gateway-{{args.podHash}}-.*",route!~"/health|/metrics",status=~"5.."}[1m]))
+or (sum(rate(http_server_requests_total{service="api-gateway",pod=~"api-gateway-{{args.podHash}}-.*",route!~"/health|/metrics"}[1m])) * 0))
 /
-sum(rate(http_server_requests_total{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics"}[1m]))
+sum(rate(http_server_requests_total{service="api-gateway",pod=~"api-gateway-{{args.podHash}}-.*",route!~"/health|/metrics"}[1m]))
 ```
 
 Latencia p95 de la candidata; debe ser menor a 0.5 segundos:
 
 ```promql
 histogram_quantile(0.95,
-  sum by (le) (rate(http_server_request_duration_seconds_bucket{service="api-gateway",rollout_track="canary",pod=~"api-gateway-f546c89c7-.*",route!~"/health|/metrics"}[1m])))
+  sum by (le) (rate(http_server_request_duration_seconds_bucket{service="api-gateway",pod=~"api-gateway-{{args.podHash}}-.*",route!~"/health|/metrics"}[1m])))
 ```
 
 Se esperan 45 segundos antes de medir. El analisis exige muestras validas;
@@ -156,6 +156,19 @@ de esta entrega son ventanas reales, recortadas sin agregar resultados.
 Los [pasos del runbook](docs/RUNBOOK.md) incluyen la conexion desde Cloud Shell,
 las consultas de Prometheus, Tempo y Loki y como abrir Grafana.
 La clave de Grafana se consulta en su Secret; no esta guardada en Git.
+Los datos del verificador estan en [p10.conf](p10.conf). El runbook explica
+como obtener muestras reales antes de la demostracion y documenta los falsos
+negativos reproducidos en el script original, sin modificarlo.
+La [salida del verificador original](evidencias/verificador-original.txt)
+se conserva sin editar. El [diagnostico independiente](scripts/diagnostico_p10.sh)
+comprueba el proveedor, las consultas completas con hash real, las fuentes
+de Grafana y los SLO. Su [resultado comprobado](evidencias/diagnostico-p10.txt)
+conserva la salida real con el rollout Healthy y sus dos replicas listas.
+No reemplaza la evaluacion del auxiliar.
+Gateway, catalogo y pedidos tienen dos replicas; gateway y catalogo tienen
+PDB y preferencia por nodos distintos, y pedidos tiene PDB y anti-afinidad
+obligatoria. PostgreSQL y RabbitMQ siguen con una instancia: no se presentan
+como un cluster de alta disponibilidad.
 
 Los scripts de P10 recopilan datos y generan el informe:
 `observar_incidente.py` registra el incidente, `resumen_incidente.py` muestra
@@ -199,6 +212,7 @@ gcloud container clusters resize p9-202300644 --node-pool default-pool \
 - Minutaje: **PENDIENTE**
 - Duracion requerida: 5-8 minutos.
 
-Quedan pendientes solamente el video y hacer publico el repositorio de codigo,
-segun lo indicado por el usuario.
+Quedan pendientes el enlace del video y su minutaje real. Ambos repositorios
+ya son publicos. Los falsos negativos del verificador deben revisarse con el
+auxiliar; el diagnostico independiente no equivale a una nota oficial.
 
