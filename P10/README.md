@@ -37,7 +37,7 @@ ServiceMonitor para pedidos y catalogo.
 | Tablero | [JSON exportado de Grafana](dashboards/sa-platform.json), UID `p10-sa-platform`; [captura](evidencias/07-tablero.jpg) |
 | Reversion por metricas | AnalysisRun `api-gateway-f546c89c7-12-2` Failed; Rollout `api-gateway` en `sa-p9`. [Captura](evidencias/10-reversion.png) y [datos medidos](evidencias/09-incidente.json) |
 | Recorrido sintoma a causa | [Datos del recorrido](evidencias/09-incidente.json): 2.469 segundos desde alerta Firing hasta el log de la causa. [Informe](docs/INFORME_OPERACION.md) |
-| Video demostrativo | Pendiente por decision del usuario; debe durar 5-8 minutos e incluir URL y minutaje por punto demostrado. |
+| Video demostrativo | [Evidencia P10](https://drive.google.com/file/d/1kWX4jm05ijGV8LmRHwUayv8LLO7wLzag/view?usp=sharing), duracion 4 min 52 s; [minutaje](#video). Queda por debajo del minimo de 5 minutos. |
 
 ## SLO y alertas
 
@@ -208,11 +208,29 @@ gcloud container clusters resize p9-202300644 --node-pool default-pool \
 
 ## Video
 
-- Enlace: **PENDIENTE**
-- Minutaje: **PENDIENTE**
-- Duracion requerida: 5-8 minutos.
+- Enlace: [Video demostrativo de P10](https://drive.google.com/file/d/1kWX4jm05ijGV8LmRHwUayv8LLO7wLzag/view?usp=sharing).
+- Duracion medida del archivo: **4 minutos y 52 segundos** (292.217 s).
+- Duracion requerida: 5-8 minutos. La grabacion actual queda aproximadamente
+  ocho segundos por debajo del minimo; falta ajustar ese punto.
 
-Quedan pendientes el enlace del video y su minutaje real. Ambos repositorios
-ya son publicos. Los falsos negativos del verificador deben revisarse con el
+El minutaje es aproximado y corresponde a lo mostrado en el archivo local
+`Evidencia P10.mp4` proporcionado para la entrega.
+
+| Tiempo | Contenido mostrado |
+|---|---|
+| 00:00-00:15 | Cluster en GCP y consola de Cloud Shell. |
+| 00:15-00:35 | Diagrama del flujo de telemetria. |
+| 00:35-01:05 | README: SLO, consultas del analisis, tablero y evidencias. |
+| 01:05-01:35 | Consulta de aplicaciones, pods de la plataforma y observabilidad. |
+| 01:35-02:05 | Grafana con el intervalo historico del ensayo: indicadores, trafico, errores y recursos. |
+| 02:05-02:55 | AnalysisTemplate, consultas de Prometheus, AnalysisRuns y estado del Rollout. |
+| 02:55-03:15 | Evidencias del repositorio y archivo de correlacion de telemetria. |
+| 03:15-03:55 | Informe de operacion: SLO, tiempos del incidente, causa, recuperacion y ajuste de alerta. |
+| 03:55-04:15 | Runbook de observabilidad y pasos para correlacionar traza y registro. |
+| 04:15-04:52 | Ejecucion previa del workflow P10 en GitHub Actions y sus etapas. |
+
+El tablero y el incidente corresponden a evidencia historica; no se presentan
+como una falla provocada en vivo durante la grabacion. Ambos repositorios ya
+son publicos. Los falsos negativos del verificador deben revisarse con el
 auxiliar; el diagnostico independiente no equivale a una nota oficial.
 
